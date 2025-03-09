@@ -1,0 +1,7 @@
+numpy
+matplotlib
+pandas
+scipy
+statsmodels
+scikit-learn
+tensorflow==2.10.0
