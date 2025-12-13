@@ -1,0 +1,149 @@
+\documentclass[../main.tex]{subfiles}  % verweist auf die Master‑Datei
+\begin{document}
+
+
+
+
+\section{Monte Carlo Policy evaluation and control}
+
+\defn{Rollout}{
+A trajectory $(S_t,A_t,R_t)_{t=1,...,n}$ of a MDP is called Rollout.
+}
+\begin{itemize}
+    \item One first approach would be to improve the variance of the estimation. Imagine we have two unbiased estimators $\hat{X}$ and $\bar{X}$. Then one could show that for all $\alpha \in (0,1)$
+    $$
+    \alpha \hat{X} + (1-\alpha) \bar{X}
+    $$
+    is also an unbiased estimator and with a lower variance. If we choose $\alpha = \frac{n-1}{n}$ then we have the memory trick, if we assume that $\hat{X}$ is an old estimate and $\bar{X}$ is a new estimate of $\mathbb{E}[f(X)]$. We will later see that choosing $\alpha_n = \frac{1}{n}$ is very good (Robins-Monro).
+    \item Using the estimator
+    $$
+    \frac{1}{N} \sum_{i=1}^N\sum_{t=0}^T \gamma^t R_t^{i}, \quad T \to \infty
+    $$
+    for $\mathbb{E}[\sum_{t=0}^\infty \gamma^t R_t]$ will always be biased, because we cannot simulate $T= \infty.$ A workaround will be the trick, where we showed that for
+    $T \sim Geo(1-\gamma)$
+    $$
+    \mathbb{E}[\sum_{t=0}^\infty \gamma^t R_t] = \mathbb{E}[\sum_{t=0}^T R_t],
+    $$
+    thus the estimator
+    $$
+    \frac{1}{N} \sum_{i=1}^N\sum_{t=0}^{T_i} R_t^{i}, \quad T_1,...,T_N \stackrel{iid}{\sim} Geo(1-\gamma)
+    $$
+    is unbiased.
+\end{itemize}
+The with these two approaches is still, that they are sample ineffective and computationally extensive.
+\rmkb{
+Sample efficiency means that algorithms are supposed to use as few random samples as possible. In the context of Monte Carlo this means to extract as much information as possible from any rollout (S,A,R) of the Markov decision process.
+}
+\subsection{First Visit Monte Carlo Policy Evaluation}
+A way to improve the sample efficiency of the Monte Carlo method, is to do bootstrapping, i.e. we reuse samples, if we have the opportunity to do so. In the example of the Highway from Berlin to Mannheim: Some paths may overlap and thus the time that was estimated on a specific overlapping section can be reused. We to this similarly in order to reuse samples for the Monte Carlo estimation. In order to do so, consider the following:
+
+\defn{Stopping Time}{
+Let $X:=(X_t)_{t \in \mathbb{N}}$ be a stochastic process on $(\Omega,\mathcal{F},\mathbb{P})$ taking values in $E$.We call the random variable $T: \Omega \to \mathbb{N}_0 \cup \{\infty\}$ a stopping time wrt. the process $X$, if
+$$
+\forall B \in \epsilon^{\otimes(n+1)}: \quad \{T=n\} := (X_0,...,X_n)^{-1} (B) \in \sigma (X_0,...,X_n) = \mathcal{F}_n^X.
+$$
+}
+\thm{Strong Markov Property}{
+Let $X:=(X_t)_{t \in \mathbb{N}}$ be a $(\nu,P)$-Markov Chain on the state space $E$ and $T$ a stopping time. Then it holds for all $A \in \epsilon^{\otimes \mathbb{N}_0}$, $F \in \mathcal{F}_T^X$ and $x \in E$ with $\mathbb{P}(F,X_T=x,T<\infty)>0$ that
+$$
+\mathbb{P}_\nu ( (X_T,X_{T+1},...) \in A \mid F,X_T=x,T<\infty) = \mathbb{P}_x ( (X_0,X_{1},...) \in A).
+$$
+Here $\{T<\infty\}$ is defined by $X_T (\omega)=X_{T(\omega)}(\omega)$.
+}
+
+Now we can show that Bootstrapping works. Lets consider we take a rollout $(S_t,A_t,R_t)_{t=0,...,2N}$ that is started in $S_0=s$. Using this rollout we get one sample for $V^\pi(s)$. If we want one estimate for $V^\pi(s^\prime)$, but we do not want to get another rollout, i.e. resample, then consider the first hitting time of state $s^\prime$ (which is a stopping time) denoted by
+$$
+T_{s^\prime} := \inf \{ t \in \mathbb{N}_0 \mid S_t(\omega) =s^\prime \}.
+$$
+In order to be the first hitting time before time step $n+1$ we redefine it as
+$$
+T_{s^\prime} := \inf \{ t \in \mathbb{N}_0 \mid S_t(\omega) =s^\prime,t \leq n \}.
+$$
+Now using the same rollout that started in $s \in \mathcal{S}$ we can get one sample for $V^\pi (s^\prime)$, because due to the strong Markovproperty, after the first hitting time $T_{s^\prime}$ the Markovchain resets. Note that the Markov Chain is $(S_t,A_t)$. Using this we can now construct the following algorithm that reuses samples:
+
+\begin{algorithm}[H]
+\caption{First-visit Monte Carlo policy evaluation of $V^\pi$}
+\SetKwInOut{Input}{Input}
+\SetKwInOut{Output}{Output}
+
+\Input{Policy $\pi \in \Pi$, approximate value function $V \approx V^\pi$, discount $\gamma$, initial state distribution $\mu$}
+
+
+Initialize $V(s) = 0$ and $N(s) = 0$ for all states $s$;\\
+\While{not converged}{
+    $n = n + 1$;\\
+    Sample $T \sim \text{Geo}(1 - \gamma)$;\\
+    Sample $s_0 \sim \mu$;\\
+    Generate a trajectory $(s_0,a_0,r_0,s_1,\dots,s_{2T})$ using policy $\pi$;\\
+    \For{$t=0$ \KwTo $T$}{
+        \If{$s_t \notin \{s_0,...,s_{t-1}\}$ }{
+            $v = \sum_{k=t}^{t+T} r_k$;\\
+            $N(s_t) = N(s_t) + 1$;\\
+            $V(s_t) = V(s_t) + \frac{1}{N(s_t)}\bigl(v - V(s_t)\bigr)$;\\
+        }
+    }
+}
+\Return{$V$}
+\Output{Value function $V$}
+\end{algorithm}
+
+Due to the strong markov property, we can restart a MDP, after reaching a hitting time. Thus if $T_s$ is the first hitting time of state s then
+$$
+V^\pi (s)=\mathbb{E}_s[\sum_{t=0}^\infty \gamma^t R_t ] = \mathbb{E}[\sum_{t=T_s}^\infty \gamma^{t-T_s} R_t \mid T_s < \infty]
+$$
+Let $\tau_1,...,\tau_n \stackrel{iid}{\sim} \pi$ be Rollouts from a policy, i.e. $\tau_i := (s_0^{i},a_0^{i},r_0^{i},...,s_{2N}^{i},a_{2N}^{i},r_{2N}^{i})$. Note that we want to have for every sample of the Policy the same number of steps. We choose this to be $N\sim Geo(1-\gamma)$ steps. We define the first visit Monte Carlo estimator for the value function as
+$$
+\hat{V}^\pi_{n,N} (s) := \frac{1}{n} \sum_{i=1}^n v^{i,N} (s),
+$$
+where $T_s^{i} := \inf \{ t =1,...,N\mid S_t^{i} (\omega) =s \}$ and
+$$
+v^{i,N}(s) := \frac{1}{N} \sum_{j=T_s^{i}}^{T_s^{i}+N} (\gamma^{j-T_s^{i}}) R^{i}_j \textbf{1}_{T_s^{i} \leq N}.
+$$
+Note that the $v^{i,N}(s)$ are just zero due to the indicator in the case that the state $s \in \mathcal{S}$ is not reached. Because every Rollout is iid it follows that all $v^{1;N}(s),...,v^{n,N}(s)$ are iid, as each estimator only depends on one roullout. Thus for every $s \in \mathcal{S}$ we give the MDP at most $N$ time steps to reach the respective state.\\
+Every visit Monte Carlo is then defined for the $k^{th}$ hitting time of state $s \in \mathcal{S}$
+$$
+T_s^{i} (k) := \inf \{ T_s^{i} (k-1) <t \leq N \mid S_t^{i} (\omega) =s \}
+$$
+and the sample for the value function, always when state $s$ is hit
+$$
+\tilde{V}^{\pi}_{n,N}  (s) := \frac{1}{\sum_{i,k =1}^n \textbf{1}_{T_s^{i}(k) <N}} \sum_{i,k=1}^n v_k^{i,N}(s),
+$$
+where
+$$
+v_k^{i,N}(s)= \frac{1}{N} \sum_{j=T_s^{i}(k)}^{T_s^{i}(k)+N} (\gamma^{t-T^{i}_s (k)}) R^{i}_j \textbf{1}_{ T^{i}_s (k) \leq N}.
+$$
+Again, due to the indicators $v_k^{i,N}(s)$ are zero if the state $s \in \mathcal{S}$ is not reached for the $k^{th}$ time. Here the we have more samples, but for all $i=1,...,n$ each estimator $v^{i,N}_1,...,v^{i,N}_{\max_k T^{i}_s (k)}$ are dependend, as they come from the same roullout. Here again, we give the MDP at most $N$ time steps to reach the state $s \in \mathcal{S}$ once or more.
+
+\rmkb{
+The first visit monte Carlo estimator satisfies
+$$
+\mathbb{E}[\hat{V}^\pi_{n,N} (s)] = \frac{1}{n} \sum_{i=1}^n \mathbb{E}[v^{i,N}(s)] =V^\pi (s) \iff N=\infty
+$$
+and also if we use leave the $\gamma$ and make $N \sim Geo(1-\gamma)$. Then variance is given by
+$$
+\mathbb{V}[\hat{V}^\pi_{n,N}  (s)] = \frac{1}{n^2} \sum_{i=1}^n \mathbb{V}[v^{i,N}(s)]
+$$
+The every visit Monte Carlo estimator satisfies
+$$
+\mathbb{E}[\tilde{V}^\pi_{n,N}  (s)] := \frac{1}{\sum_{i,k =1}^n \textbf{1}_{v_k^{i,N}(s) >0}} \sum_{i,k=1}^n \mathbb{E}[v^{i,N}_k(s)] =V^\pi (s) \iff N=\infty
+$$
+or using the trick again with the geometric time horizon after every hitting time. The variance is higher for the every visit Monte Carlo estimator as, due to the dependence, the covariance is not zero
+$$
+\mathbb{V}[\tilde{V}^\pi_{n,N}  (s)] =\left( \frac{1}{\sum_{i,k =1}^n \textbf{1}_{T_s^{i}(k) <N}} \right)^2 \sum_{i,k=1}^n \mathbb{V}[v^{i,N}_k(s)] + \sum_{\substack{l,L,m,M=1\\ l \neq L \neq m \neq M}}^n Cov (v_l^{m,N} (s),v_L^{M,N}(s)).
+$$
+}
+
+
+
+\thm{}{
+If we visit every state infinitely often for the $(a,s)$ with first visit Monte carlo method with the policy and in each step choose $N \sim Geo(1-\gamma)$ then $\hat{V}_n^\pi (s) \to V^\pi (s) $ for $n \to \infty$ $a.s$.
+}
+\pf{
+LLN, because every sample is iid and we assume bounded rewards.
+}
+For first visit Monte Carlo, thus we need to force exploration in the policy $\pi$ and initial distribution $\mu$ in order to ensure convergence. Thus we can never really evaluate greedy policies. As in bandits, one will first force exploration and then let this forced exploration go to zero, i.e.
+$$
+\pi + explorationBonus(n), \quad  explorationBonus(n) \to 0 , n \to \infty.
+$$
+
+\end{document}

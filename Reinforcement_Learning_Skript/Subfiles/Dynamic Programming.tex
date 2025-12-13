@@ -1,0 +1,1530 @@
+\documentclass[../main.tex]{subfiles}  % verweist auf die Master‑Datei
+\begin{document}
+
+
+\subsection{Markov-Decision Process}
+In the situation of Markov decision Process (MDPs) it is slithgtly more complicated, as we now not only observe the game, but take part in it. The goal will be to find a distribution which we call policy, that maximizes the expected reward of the game.
+\defn{Markov-Decision-Model}{
+A MDM is a tuple $(\mathcal{S},\mathcal{A},\mathcal{R},p)$ consisiting of the following
+\begin{itemize}
+    \item The measurable set $(\mathcal{S},\bar{\mathcal{S}})$, called state space
+    \item The measurable set $(\mathcal{A},\bar{\mathcal{A}})$ called action space, where for every $s \in \mathcal{S}$ the space $(\mathcal{A}_s,\bar{\mathcal{A}_s})$ is called action space of the state $s$ and
+    $$
+    \mathcal{A} = \bigcup_{s \in \mathcal{S}} \mathcal{A}_s, \quad \text{and} \quad \bar{\mathcal{A}} = \sigma (\bigcup_{s \in \mathcal{S}} \bar{\mathcal{A}}_s).
+    $$
+    \item The reward space is defined as a measurable set $\mathcal{R} \subseteq \mathbb{R}$ always containing $0 \in \mathcal{R}$. Its restricted Borel-sigma-Algebra is defined as
+    $$
+    \bar{\mathcal{R}} := \{ \mathcal{R} \cap B \mid B \in \mathcal{B}(\mathbb{R}) \}.
+    $$
+    \item A function 
+    $$
+    p: ( \bar{\mathcal{S}} \times \bar{\mathcal{R}}) \times (\mathcal{S} \times \mathcal{A}) \to [0,1], (B,(s,a)) \mapsto p(B;s,a)
+    $$
+    is called transition function if $p$ is a Markov Kernel on $\bar{\mathcal{S}} \otimes \bar{\mathcal{R}} \times (\mathcal{S} \times \mathcal{A})$, i.e.
+    \begin{itemize}
+        \item $(s,a) \mapsto p(B;s,a)$ is $(\bar{\mathcal{S}} \otimes \bar{\mathcal{A}})-\mathcal{B}([0,1])$ measurable for all $B$.
+        \item $B \mapsto p(B;s,a)$ is a probability measure on $\bar{\mathcal{S}} \times \bar{\mathcal{R}}$ for all $(s,a)$.
+    \end{itemize}
+    A MDP is called discrete if $\mathcal{S},\mathcal{A},\mathcal{R}$ are discrete. Then the sigma algebras are just the respective power sets.
+\end{itemize}
+}
+The transition function kernel only describes the transition of $(s,a) \mapsto (s^\prime,r)$, but does not describe how the next action $a^\prime$ is chosen. A MDP where there is only one action (you cannot make any decisions) then this is just a markov chain.\\
+In order not to confuse conditional probabilities with Markov kernels, we will use the notation ";" for the transition function and $"|"$ exclusively for conditional probabilites.
+
+\defn{Policy}{
+For a MDP $(\mathcal{S},\mathcal{A},\mathcal{R},p)$ a policy is defined as
+\begin{itemize}
+    \item an initial distribution $\pi_0$ on $(\bar{\mathcal{A})} \times \mathcal{S}$
+    \item a sequence of probability kernels on $\pi := (\pi_t)_{t \in \mathbb{N}}$ on $\bar{\mathcal{A}} \times ((\mathcal{S}\times \mathcal{A})^{t-1} \times \mathcal{S})$ such that
+    $$
+    \forall (s_0,s_0,...,s_t) \in (\mathcal{S}\times \mathcal{A})^{t-1} \times \mathcal{S}: \quad   \pi_t (\mathcal{A}_{s_t} ;s_0,a_0,...,s_t) =1
+    $$
+    is a probability measure on $\mathcal{A}_s$.
+\end{itemize}
+The set $\Pi$ is the set of all probability measures.
+}
+The second point ensures that only actions from $\mathcal{A}_{s_t}$ can be played.
+\textbf{From now on all sets are discrete and the $\sigma$-algebras are powersets.}
+\defn{Some Definitions}{
+For a MDP we define
+\begin{itemize}
+    \item $p(s^\prime ; s,a) := p(\{s^\prime\} \times \mathcal{R};s,a)$
+    \item $p(r;s,a) := p(\mathcal{S}\times \{r\};s,a)$
+    \item Expected reward given state action tuple $(s,a)$
+    $$
+    r(s,a) := \sum_{r \in \mathcal{R}} r\cdot p(r;s,a)
+    $$
+    \item Expected reward given state action tuple $(s,a)$ and next state is $s^\prime$
+    $$
+    r(s,a,s^\prime) := \sum_{r \in \mathcal{R}} r \frac{p(s^\prime,r;s,a)}{p(s^\prime ;s,a)}
+    $$
+\end{itemize}
+The above are only defined when the demonitor is positive.
+}
+We can now define a stochastic process on $\mathcal{S} \times \mathcal{A} \times \mathcal{R}$ whose dynamic is solely dependend on the transition function $p$ and policy $\pi$ (and some initial distribution).
+
+\rmkb{
+Backround:\\
+Let $I= \mathbb{N}$ we then define for $\emptyset \neq K,J \subseteq I$ the finite projections
+$$
+\pi_K^J : E^J \to E^K, (X_t)_{t \in J} \mapsto \pi_K^J ((X_t)_{t \in J}) := (X_t)_{t \in K}
+$$
+and
+$$
+\pi^J : E^I \to E^J, (X_t)_{t \in I} \mapsto \pi^J ((X_t)_{t \in I}) := (X_t)_{t \in J}.
+$$
+Further for a measure $Q_J$ on $(E_j,\epsilon^{\otimes J})$ we call the family $\{Q_J \mid J \subseteq I \text{ finite} \}$ consistent if
+$$
+\forall J_1 \subseteq J_2 \subseteq I: \quad Q_{J_1} = Q_{J_2} \circ (\pi_{J_1}^{J_2})^{-1}, \quad \emptyset \neq J_1,J_2.
+$$
+Finally, the Kolmogorov extension theorem tells us that for a polisch space $(E,\epsilon)$ and a consitent family $\{Q_J \mid J \subseteq I \text{ finite} \}$ there exists a unique probability measure $Q$ on $(E^{I},\epsilon^{\otimes I})$ such that
+$$
+Q_J = Q \circ (\pi_J)^{-1}, \quad \emptyset \neq J \subseteq I.
+$$
+}
+
+\thm{Existence of finite MDPs}{
+Let $(\mathcal{S},\mathcal{A},\mathcal{R},p)$ be a MDP, $\pi$ a policy and $\mu$ a distribution on $\mathcal{S}$. Then there exists a probability space $(\Omega,\mathcal{F},\mathbb{P}_\mu)$ carrying a stochastic process $(S_t,A_t,R_t)_{t \in \mathbb{N}_0}$ with values in $(\mathcal{S},\mathcal{A},\mathcal{R})$ such that for all $t \in \mathbb{N}$ holds that
+\begin{itemize}
+    \item $\mathbb{P}_\mu^\pi(S_0 =s_0,A_0=a_0) = \mu(s_0) \pi_0(a_0;s_0)$
+    \item $\mathbb{P}_\mu^\pi (A_t=a_t \mid S_0 =s_0,A_0=a_0,...,S_t =s_t) = \pi_t (a_t ; s_0,a_0,...,s_t)$
+    \item $\mathbb{P}_\mu^\pi(S_{t+1},R_t =r_t \mid S_t =s_t,A_t=a_t) = p(s_{t+1},r_t;s_t,a_t)$
+\end{itemize}
+We will write in future $\mathbb{P}_\mu^\pi = \mathbb{P}.$
+}
+\pf{
+$T< \infty:$\\
+The probability space is the set of all trajectories up to time $T$
+$$
+\Omega_T := \{ \omega := (s_0,a_0,r_0,...,s_T,a_T,r_T) \in (\mathcal{S}\times \mathcal{A} \times \mathcal{R})^T  \}
+$$
+and its $\sigma$-algebra $\mathcal{F}_T$ its respective power set. We then define 
+\begin{align*}
+    \mathbb{P}_T (\{(s_0,a_0,r_0,...,s_T,a_T,r_T)\}) := \mu(s_0) \cdot \pi_0 (a_0;s_0) \cdot \prod_{i=1}^T p (s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i ; s_0,a_0,...,s_i ) \cdot p(\mathcal{S}\times \{r_T\} ; s_T,a_T)
+\end{align*}
+We now need to show that $\mathbb{P}_T$ defined on the singleton is indeed a probability measure. This is shown in the excersise.\\
+Now $T=\infty$:\\
+Then using the remark above, we need to show that $\mathbb{P}_T$ is a consistent family. First, define $\Omega := (\mathcal{S} \times \mathcal{R} \times \mathcal{A})^\infty$ and $\mathcal{F}$ the respective cylinder $\sigma$-algebra. We define the two projections
+$$
+\pi_T^{T+1}: \Omega^{T+1} \to \Omega^T, \omega \mapsto \omega\big|_{T}
+$$
+and
+$$
+\pi_T: \Omega \to \Omega^T, \omega \mapsto  \Omega^T, \omega \mapsto \omega\big|_{T}.
+$$
+If we show $\mathbb{P}_T = \mathbb{P}_{T+1} \circ (\pi_T^{T+1})^{-1} $ for all $T \in \mathbb{N}$, then $(\mathbb{P}_T)_{T \in \mathbb{N}}$ is a consitent family and there exists a unique probability measure $\mathbb{P}$ on $(\Omega, \mathcal{F})$ such that
+$$
+\mathbb{P}_T = \mathbb{P} \circ (\pi_T)^{-1},\quad \forall T \in \mathbb{N}.
+$$
+We then define $\mathbb{P}_\mu^\pi := \mathbb{P}$ to emphasize the depends on the policy and the initial distribution $\mu.$\\
+Consistency:
+\begin{align*}
+    \mathbb{P}_{T+1} ((\pi_T^{T+1})^{-1} &(s_0,a_0,r_0,...,s_T,a_T,r_T))\\ =  \mathbb{P}_{T+1} ( \bigcup_{s \in \mathcal{S}} \bigcup_{a \in \mathcal{A}} \bigcup_{r \in \mathcal{R}} &(s_0,a_0,r_0,...,s_T,a_T,r_T,s,a,r)\\
+    = \sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}} \sum_{r \in \mathcal{R}} \mathbb{P}_{T+1} (  &(s_0,a_0,r_0,...,s_T,a_T,r_T,s,a,r) \\
+    = \sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}} \sum_{r \in \mathcal{R}} \mu(s_0) \cdot & \pi_0 (a_0;s_0) \cdot \prod_{i=1}^T p (s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i ; s_0,a_0,...,s_i ) \\
+    \cdot p (s,r_{T};s_{T},a_{T}) & \cdot \pi_{T+1} (a ; s_0,a_0,...,s )  \cdot p(\mathcal{S}\times \{r\} ; s,a) \\
+     = \mu(s_0) \cdot  \pi_0 (a_0;s_0)& \cdot \prod_{i=1}^T p (s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i ; s_0,a_0,...,s_i ) \\
+    \cdot& \underbrace{\sum_{s \in \mathcal{S}} p (s,r_{T};s_{T},a_{T})}_{= p(\mathcal{S} \times \{r_T\};s_T,a_T)}  \cdot \underbrace{\sum_{a \in \mathcal{A}}  \pi_{T+1} (a ; s_0,a_0,...,s )}_{=1}  \cdot \underbrace{ \sum_{r \in \mathcal{R}} p(\mathcal{S}\times \{r\} ; s,a)}_{=1} \\
+    &= \mathbb{P}_{T} ((s_0,a_0,r_0,...,s_T,a_T,r_T))
+\end{align*} 
+Canonical Construction:\\
+Similiar to the one dimensional case where for every distribution function $F$ there exists a random variable $X$ defined on $(\Omega, \mathcal{F},\mathbb{P})$ such that $X \sim F$, where we used that $X(\omega)=\omega$, we can say that there exists a stochastic process $(S_t,A_t,R_t)_{t \in \mathbb{N}}$ on $(\Omega, \mathcal{F},\mathbb{P})$ such that $(S_t,A_t,R_t)_{t \in \mathbb{N}} \sim \mathbb{P}$, where $(S_t,A_t,R_t)(\omega)=(s_t,a_t,r_t)$ is the identity mapping.
+Properities:\\
+We show the second condition:
+\begin{align*}
+    &\mathbb{P}(A_t =a_t \mid S_0 =s_0,A_0,...,S_t=s_t)
+ = \frac{\mathbb{P}( S_0 =s_0,A_0,...,S_t=s_t,A_t =a_t )}{\mathbb{P}( S_0 =s_0,A_0,...,S_t=s_t)} \\
+ &= \frac{ \sum_{r_0 \in \mathcal{R}} ...\sum_{r_t \in \mathcal{R}} \mathbb{P}( S_0 =s_0,A_0,R_0=r_0,...,S_t=s_t,A_t =a_t,R_t=r_t )}{\sum_{r_0 \in \mathcal{R}} ...\sum_{r_t \in \mathcal{R}} \sum_{a_t \in \mathcal{A}} \mathbb{P}(S_0 =s_0,A_0,R_0=r_0,...,S_t=s_t,A_t =a_t,R_t=r_t )} \\
+  &= \frac{ \sum_{r_0 \in \mathcal{R}} ...\sum_{r_t \in \mathcal{R}}  \mu(s_0) \cdot \pi_0 (a_0;s_0) \cdot \prod_{i=1}^t p (s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i ; s_0,a_0,...,s_i ) \cdot p(\mathcal{S}\times \{r_t\} ; s_t,a_t)}{\sum_{r_0 \in \mathcal{R}} ...\sum_{r_t \in \mathcal{R}} \sum_{a_t \in \mathcal{A}} \mu(s_0) \cdot \pi_0 (a_0;s_0) \cdot \prod_{i=1}^t p (s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i ; s_0,a_0,...,s_i ) \cdot p(\mathcal{S}\times \{r_t\} ; s_t,a_t)} \\
+  &= \frac{ \sum_{r_0 \in \mathcal{R}} ...\sum_{r_{t-1} \in \mathcal{R}}  \mu(s_0) \cdot \pi_0 (a_0;s_0) \cdot \prod_{i=1}^{t-1} p (s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i ; s_0,a_0,...,s_i ) }{\sum_{r_0 \in \mathcal{R}} ...\sum_{r_{t-1} \in \mathcal{R}} \mu(s_0) \cdot \pi_0 (a_0;s_0) \cdot \prod_{i=1}^{t-1} p (s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i ; s_0,a_0,...,s_i ) \cdot p(\mathcal{S}\times \{r_t\} ; s_t,a_t)} \\
+  & \cdot \underbrace{\frac{ \sum_{r_t \in \mathcal{R}} p (s_t,r_{t-1};s_{t-1},a_{t-1}) \cdot \pi_t (a_t ; s_0,a_0,...,s_t )\cdot p(\mathcal{S}\times \{r_{t}\} ; s_t,a_t)}{\sum_{r_t \in \mathcal{R}} p (s_t,r_{t-1};s_{t-1},a_{t-1}) \cdot \underbrace{\sum_{a_t \in \mathcal{A}} \pi_t (a_t ; s_0,a_0,...,s_t )}_{=1} \cdot p(\mathcal{S}\times \{r_t\} ; s_t,a_t) }}_{ =\pi_t (a_t ; s_0,a_0,...,s_t )} \\
+  &= \pi_t (a_t ; s_0,a_0,...,s_t ) 
+ \end{align*}
+
+
+}
+\defn{Markov Decision Process}{
+Given a MDM $(\mathcal{S},\mathcal{A},\mathcal{R},p)$, a policy $\pi$ and an initial distribution $\mu$ on $\mathcal{S}$, then the stochastic process $(S_t,A_t)_{t \in \mathbb{N}}$ on $(\Omega,\mathcal{F},\mathbb{P}_\mu)$ is called discrete time Markov decision process and $(R_t)_{t \in \mathbb{N}_0}$ the corresponding reward process.\\
+If the initial distribution is the dirac measure $\delta_s$ then we will write $\mathbb{P}_s^\pi := \mathbb{P}_{\delta_s}^\pi$.
+}
+
+\rmkb{
+The derivation of the path probabilities is and will be very important in the future
+\begin{align*}
+    &\mathbb{P}_\mu^\pi (S_0=s_0,A_0=a_0,R_0=r_0,...,S_T=s_t,A_t=a_t,R_t=r_t) \\
+    &= \mu(s_0) \pi_0(a_0;s_0) \left(\prod_{i=1}^t p(s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i;s_0,a_0,...,s_i) \right) \cdot p(\mathcal{S}\times \{r_t\}; s_t,a_t).
+\end{align*}
+}
+
+In literature one does not differentiate between the Markov decision Model and the Markov Decision Process! For us, the Markov decision process is the Markov decision model plus the policy and an initial distribution.\\
+We are also interested also in path probabilies started at a specific time $t \in \mathbb{N}$, i.e. for $T>t$ we have
+\begin{tiny}
+\begin{align*}
+    & \mathbb{P}(S_t =s_t,A_t = a_t,R_t=r_t,...,S_T=s_T,A_T=a_T,R_T=r_T \mid S_{t-1}=s_{t-1},A_{t-1}=a_{t-1} ) \\
+    &=\frac{\mathbb{P}( S_{t-1}=s_{t-1},A_{t-1}=a_{t-1},S_t =s_t,A_t = a_t,R_t=r_t,...,S_T=s_T,A_T=a_T,R_T=r_T  )}{\mathbb{P}( S_{t-1}=s_{t-1},A_{t-1}=a_{t-1})} \\
+        &=\frac{\sum_{s_0 \in \mathcal{S}} \sum_{a_0 \in \mathcal{A}_{s_0}} \sum_{r_0 \in \mathcal{R}} \cdots \sum_{s_{t-2} \in \mathcal{S}} \sum_{a_{t-2} \in \mathcal{A}_{s_{t-2}}} \sum_{r_{t-2} \in \mathcal{R}} \mathbb{P}( S_{t-1}=s_{t-1},A_{t-1}=a_{t-1},R_{t-1} =r_{t-1},...,S_T=s_T,A_T=a_T,R_T=r_T  )}{\sum_{s_0 \in \mathcal{S}} \sum_{a_0 \in \mathcal{A}_{s_0}} \sum_{r_0 \in \mathcal{R}} \cdots \sum_{s_{t-2} \in \mathcal{S}} \sum_{a_{t-2} \in \mathcal{A}_{s_{t-2}}} \sum_{r_{t-2} \in \mathcal{R}} \mathbb{P}(S_0=s_0,A_0=a_0,R_0=r_0,... S_{t-1}=s_{t-1},A_{t-1}=a_{t-1})} \\
+    &= \sum_{r_{t-2} \in \mathcal{R}} p(\{s_t\} \times \mathcal{R} ;s_{t-1} a_{t-1}) \cdot \pi_t (a_t;s_0a_0,...,a_{t-1},s_t) \prod_{i=t+1}^T p(s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i;s_0a_0,...,a_{i-1},s_i) \cdot p(\mathcal{S}\times \{r_T\};s_T,a_T)
+\end{align*}
+\end{tiny}
+and similarly
+\begin{align*}
+    & \mathbb{P}(S_t =s_t,A_t = a_t,R_t=r_t,...,S_T=s_T,A_T=a_T,R_T=r_T \mid S_{t-1}=s_{t-1} ) \\
+    &= \sum_{a_{t-1} \in \mathcal{A}_{s_{t-1}}} \pi_{t-1} (a_{t-1};s_0a_0,...,a_{t-2},s_{t-1}) \prod_{i=t}^T p(s_i,r_{i-1};s_{i-1},a_{i-1}) \cdot \pi_i (a_i;s_0a_0,...,a_{i-1},s_i) \cdot p(\mathcal{S}\times \{r_T\};s_T,a_T)
+\end{align*}
+
+\exm{}{
+The probability below looks differently if we know in which state we are, compared to the case that we do not know where we are. \\
+Here we show that if we know in which state we are in and the transition of $(s,a)$ to $r$ and $s^\prime$ are independend (conditional independence), i.e. there exists two kernels $h,q$ such that
+$$
+p(s^\prime,r;s,a) := h(s^\prime;s,a) q(r;s,a)
+$$
+Case 1: I know where I am:\\
+The reward $r$ when coming from $(s,a)$ does not depend on the state $s^\prime$ where it is going, i.e.
+\begin{align*}
+    & \mathbb{P}(R_t=r \mid S_t =s,A_t=a,S_{t+1}=s^\prime ) \\
+    &= \frac{\mathbb{P}(R_t=r, S_t =s,A_t=a,S_{t+1}=s^\prime )}{\mathbb{P}(S_t =s,A_t=a,S_{t+1}=s^\prime )} \frac{\mathbb{P}(A_t=a,S_{t+1}=s^\prime )}{\mathbb{P}(A_t=a,S_{t+1}=s^\prime )} \\
+    &= \frac{\mathbb{P}(R_t=r,S_{t+1}=s^\prime \mid  S_t =s,A_t=a  )}{\mathbb{P}(S_{t+1}=s^\prime \mid A_t=a,S_t =s )} \\
+    &= \frac{p(s^\prime,r;s,a)}{p(\{s^\prime\}\times \mathcal{R};s,a)}  \\
+    &= \frac{h(s^\prime;s,a) q(r;s,a)}{h(s^\prime,s,a) \cdot 1} = q(r;s,a) = p(\mathcal{S}\times \{r\};s,a)\\
+    &= \mathbb{P}(R_t =r \mid S_t =s,A_t =a)
+\end{align*}
+Case 2: I do not know where I am:\\
+The reward $r$ when coming from $(\mathcal{S},a)$ depends on the state $s^\prime$ where it is going, i.e.
+\begin{align*}
+    & \mathbb{P}(R_t=r \mid A_t=a,S_{t+1}=s^\prime ) \\
+    &= \frac{\sum_{s \in \mathcal{S}} \mathbb{P}(R_t=r, S_t =s,A_t=a,S_{t+1}=s^\prime )}{\sum_{s \in \mathcal{S}} \mathbb{P}(S_t =s,A_t=a,S_{t+1}=s^\prime )} \\
+    &= \frac{\sum_{s \in \mathcal{S}} \mathbb{P}(R_t=r,S_{t+1}=s^\prime \mid  S_t =s,A_t=a  )}{ \sum_{s \in \mathcal{S}}\mathbb{P}(S_{t+1}=s^\prime \mid A_t=a,S_t =s )} \\
+    &= \frac{\sum_{s \in \mathcal{S}}p(s^\prime,r;s,a)}{\sum_{s \in \mathcal{S}}p(\{s^\prime\}\times \mathcal{R};s,a)}  \\
+    &= \frac{\sum_{s \in \mathcal{S}}h(s^\prime;s,a) q(r;s,a)}{\sum_{s \in \mathcal{S}}h(s^\prime,s,a) \cdot 1} 
+\end{align*}
+}
+
+\exm{}{
+In many examples, the reward are deterministic functions wrt. previuos state, ation and next state, i.e. $R_t := R (S_t,A_t,S_{t+1})$, then the transition function is
+$$
+p(s^\prime,r;s,a) := h(s^\prime;s,a) \textbf{1}_{R(s,a,s^\prime)=r}.
+$$
+This will be the case in the Ice vendor example.\\
+In the case as above, if we know where we are, then $R_t$ and $S_{t+1}$ are independend, i.e.
+$$
+R(s,a,s^\prime) = R(s,a)
+$$
+}
+
+\defn{Terminating State}{
+A state $s \in \mathcal{S}$ satisfying $p(s;s,a)=1$ for all $a \in \mathcal{A}_s$ is called terminating sate. We define by $\Delta$ the set of all terminating states and we assume that
+$$
+\forall s \in \Delta: \quad p(s,0;s,a)=1.
+$$
+}
+
+\exm{Grid World}{
+---\\
+Windy grid World: Depending on the strength of the wind, it is not clear on how to play. Therefore, find policy that maximizes $V(\pi)$. This will be later the Bellman optimality equations.\\
+Action Masking: Define all actions for every state, but not every action is allowed in every state.\\
+In Grid world: $R(s,a,s^\prime)=R(s,a)=R(s)=g(s)$.
+}
+Finite time MDP. Grid world is not finite time. Different goals.
+\exm{Ice Vendor}{
+---
+}
+
+\defn{Markov and Stationary Policies}{
+A policy $\pi = (\pi_t)_{t \in \mathbb{N}_0} \in \Pi$ is called
+\begin{itemize}
+    \item [i)] a Markov policy if there exists a sequence of kernels $(\varphi_t)_{t \in \mathbb{N}_0}$ on $(\bar{\mathcal{A}}\times \mathcal{S})$ such that
+    $$
+  \forall s_0a_0,...,s_t \in (\mathcal{S} \times \mathcal{A})^{t-1} \times \mathcal{S}:\quad  \pi_t (\cdot;s_0,a_0,...,s_t) = \varphi_t (\cdot;s_t).
+    $$
+    The set of all Markov policies is denoted by $\Pi_M$.
+    \item a stationary policy if there exists one kernel $\varphi$ on $(\bar{\mathcal{A}}\times \mathcal{S})$ such that
+    $$
+  \forall s_0a_0,...,s_t \in (\mathcal{S} \times \mathcal{A})^{t-1} \times \mathcal{S}:\quad  \pi_t (\cdot;s_0,a_0,...,s_t) = \varphi (\cdot;s_t).
+    $$
+    The set of all stationary policies is denoted by $\Pi_S$.
+    \item a deterministic stationary policy if there exists one kernel $\varphi$ on $(\bar{\mathcal{A}}\times \mathcal{S})$ such that
+    $$
+  \forall s_0a_0,...,s_t \in (\mathcal{S} \times \mathcal{A})^{t-1} \times \mathcal{S}:\quad  \pi_t (\cdot;s_0,a_0,...,s_t) = \varphi (\cdot;s_t).
+    $$
+    and only takes values in $\{0,1\}$. The set of all stationary policies is denoted by $\Pi_S^D$.
+\end{itemize}
+}
+Clearly we have the relation that
+$$
+\Pi_S^D \subseteq \Pi_S \subseteq \Pi_M.
+$$
+
+\thm{Markov Property}{
+If $\pi \in \Pi_M$ then $(S_t,A_t)_{t \in \mathbb{N}}$ is a Markov chain (time depended) on $(\mathcal{S} \times \mathcal{A})$ with the two-step transition
+$$
+p_{(a,s),(a^\prime,s^\prime)}^t := p(s^\prime;s,a) \cdot \pi_t (a^\prime;s^\prime)
+$$
+}
+\pf{
+\begin{align*}
+    & \mathbb{P}(S_{t+1} =s_{t+1},A_{t+1}=a_{t+1}\mid S_t =s_t ,A_t =a_t) \\
+    &= \frac{\mathbb{P}( S_t =s_t ,A_t =a_t,S_{t+1} =s_{t+1},A_{t+1}=a_{t+1})}{\mathbb{P}( S_t =s_t ,A_t =a_t)} \\
+    &= \frac{\sum_{s_0,a_0} \cdots \sum_{s_{t-1},a_{t-1}} \mathbb{P}( S_0 =s_0 ,A_0 =a_0,...,S_{t+1} =s_{t+1},A_{t+1}=a_{t+1})}{\sum_{s_0,a_0} \cdots \sum_{s_{t-1},a_{t-1}}  \mathbb{P}( S_0=s_0,A_0=a_0,...,S_t =s_t ,A_t =a_t)} \\
+    &= \frac{\sum_{s_0,a_0} \cdots \sum_{s_{t-1},a_{t-1}} \mu(s_0)\pi_0(a_0;s_0) \prod_{i=1}^{t+1} p(s_i;s_{i-1},a_{i-1}) \pi_i (a_i,s_0,a_0,...,a_{i-1},s_i )    }{\sum_{s_0,a_0} \cdots \sum_{s_{t-1},a_{t-1}} \mu(s_0)\pi_0(a_0;s_0) \prod_{i=1}^{t} p(s_i;s_{i-1},a_{i-1}) \pi_i (a_i,s_0,a_0,...,a_{i-1},s_i )   } \\
+    &= \frac{\sum_{s_0,a_0} \cdots \sum_{s_{t-1},a_{t-1}} \mu(s_0)\pi_0(a_0;s_0) \prod_{i=1}^{t+1} p(s_i;s_{i-1},a_{i-1}) \varphi_i (a_i;s_i )    }{\sum_{s_0,a_0} \cdots \sum_{s_{t-1},a_{t-1}} \mu(s_0)\pi_0(a_0;s_0) \prod_{i=1}^{t} p(s_i;s_{i-1},a_{i-1}) \varphi_i (a_i;s_i )   } \\
+    &= p(s_{t+1};s_{t},a_{t}) \varphi_{t+1} (a_{t+1};s_{t+1} )  \\
+    &\stackrel{(*)}{=} \frac{\mathbb{P}( S_0 =s_0 ,A_0 =a_0,...,S_{t+1} =s_{t+1},A_{t+1}=a_{t+1})}{\mathbb{P}( S_0 =s_0 ,A_0 =a_0,...,S_t=s_t,A_t=a_t)} \\
+    &= \mathbb{P}(S_{t+1} =s_{t+1},A_{t+1}=a_{t+1}\mid S_0=s_0,A_0 =a_0,..., S_t =s_t ,A_t =a_t)
+\end{align*}
+where we used in $(*)$ that
+$$
+\mathbb{P} (S_0 =s_0,A_0 = a_0,...,S_{t+1}=s_{t+1},A_{t+1}=a_{t+1}) = \mu(s_0)\pi_0(a_0;s_0) \prod_{i=1}^{t} p(s_i;s_{i-1},a_{i-1}) \pi_i (a_i,s_0,a_0,...,a_{i-1},s_i )   p(s_{t+1};s_{t},a_{t}) \pi_{t+1} (a_{t+1},s_0,a_0,...,a_{t},s_{t+1} )  
+$$
+which is equivalent to $(*)$.
+}
+
+\cor{
+If we have a stationary distribution instead of a Markov policy in the theorem above, then $(S_t,A_t)_{t \in \mathbb{N}}$ is a time-homogenous Markov chain on $(\mathcal{S} \times \mathcal{A})$ with the two-step transition
+$$
+p_{(a,s),(a^\prime,s^\prime)} := p(s^\prime;s,a) \cdot \pi (a^\prime;s^\prime)
+$$
+}
+\pf{
+Set $\varphi_t (a;s) =\varphi (a;s)$.
+}
+
+\thm{Markov Reward Property}{
+If $\pi \in \Pi_S$ then $(S_t,A_t,R_t)_{t \in \mathbb{N}}$ satisfies the Markov reward process property
+\begin{align*}
+    &= \mathbb{P}(S_{t+1},A_{t+1},R_{t+1})=(s_{t+1},a_{t+1},r_{t+1}) \mid (S_0,A_0) =(s_0,a_0),..., (S_t,A_t) =(s_t,a_t)) \\
+    &= \mathbb{P}(S_{t+1},A_{t+1},R_{t+1})=(s_{t+1},a_{t+1},r_{t+1}) \mid (S_t,A_t) =(s_t,a_t))
+\end{align*}
+With time-homogenuous state/reward transition probaility
+$$
+p_{(s,a),(s^\prime,a^\prime,r^\prime)} = p(s^\prime,r;s,a) \pi (a^\prime;s^\prime).
+$$
+}
+\pf{
+Analogously only that we need to insert $t+1$ sums over the reward $\mathcal{R}$.
+}
+Note if we choose again $\pi \in \Pi_M$ then it is a Markov reward process with that is not time-homogenuous
+
+\subsection{Stochastic Control theory}
+\rmkb{
+Here we will shortly explain the notation used
+\begin{itemize}
+    \item $\mathbb{P}^\pi_{s,a}$ is the Markov reward process $(S,A,R)$ started in $(s,a)$, i.e.
+    $$
+    \mathbb{P}^\pi_{s,a} := \mathbb{P}^\pi \otimes \delta_{S_0}(s) \otimes \delta_{A_0} (a),
+    $$
+    i.e.
+    $$
+    \mathbb{P}_{s,a}^\pi (S_0 =s,A_0=a_0) = \delta_{s} \delta_{a_0}  = \mathbb{P}_{\delta_s \otimes \delta_a}^\pi (S_0=s,A_0 =a_0)
+    $$
+    \item $\mathbb{P}^\pi_{s}$ the Markov reward process $(S,A,R)$ started in $s$ and the first action is chosen wrt. to $\pi_0(\cdot ;s)$, i.e.
+    $$
+    \mathbb{P}^\pi_{s} := \mathbb{P}^\pi \otimes \delta_{S_0}(s) \otimes \pi_0(\cdot ;s)
+    $$
+    i.e.
+    $$
+    \mathbb{P}_s^\pi (S_0 =s,A_0=a_0) = \delta_{s} \pi_0 (a_0;s) = \mathbb{P}_{\delta_s}^\pi (S_0=s,A_0 =a_0)
+    $$
+    \item We then have the relation that
+    $$
+    \mathbb{P}_s^\pi = \sum_{a \in \mathcal{A}} \mathbb{P}^\pi_{a,s} \pi_0 (a,s).
+    $$
+\end{itemize}
+}
+
+A first potential optimization goal would be 
+$$
+\forall s \in \mathcal{S}: \quad argmax_\pi \mathbb{E}^\pi_s [\sum_{t=0}^T R_t] \quad \stackrel{\text{not clear}}{\iff} \quad  \forall s\in \mathcal{S},a \in \mathcal{A}:\quad argmax_\pi \mathbb{E}_{s,a}^\pi [\sum_{t=0}^T R_t].
+$$
+There are different choices for $T$.
+\begin{itemize}
+    \item $T=0$: This is called contextual bandit. If $|\mathcal{S}| =1$ then we have a bandit problem.
+    \item $T=\min\{t \mid S_t =s^\prime\}$ is stopping time for a fixed state $s^\prime \in \mathcal{S}$. If we have $R \equiv 1$ then we count how many steps are needed to reach $s^\prime$, i.e. this is called stochastic shortest path.
+    \item $T \in \mathbb{N}$ is fixed is called finite time MDP
+    \item $T \sim Geo(1-\gamma)$, $\gamma \in (0,1)$, where $T$ is independent of $(S,A,R)$. (Because the geometric distribution is memoryless, it is very helpful in ??? ). For the geometric series, we had via induction that for all $n\in \mathbb{N}$:
+    $$
+    \sum_{k=1}^n \gamma^k = \frac{1-\gamma^{n+1}}{1-\gamma} \to \frac{1}{1-\gamma}, \quad n \to \infty ???
+    $$
+    and for $T \sim Geo(p)$ we have that
+    $$
+    \mathbb{P}(T=k) = (1-\gamma)^{1-k}\gamma = \gamma e^{(1-k)\log (1-\gamma)} ???
+    $$
+    We can show that
+    \begin{align*}
+        \mathbb{E}^\pi[\sum_{t=0}^T R_t] = \mathbb{E}^\pi[\sum_{t=0}^\infty \textbf{1}_{t \leq i, i=T \in \mathbb{N}} R_t] &=\mathbb{E}^\pi[\sum_{k=0}^\infty \textbf{1}_{T=k} \sum_{t=0}^\infty \textbf{1}_{t \leq k} R_t] \\
+        &=\sum_{k=0}^\infty \sum_{t=0}^\infty \mathbb{E}^\pi[ \textbf{1}_{T=k}  \textbf{1}_{t \leq k} R_t] \\
+        &\stackrel{ind.}{=}\sum_{k=0}^\infty \sum_{t=0}^\infty  \mathbb{P}(T=k)  \textbf{1}_{t \leq k} \mathbb{E}^\pi[R_t] \\
+        &=(1-\gamma)\sum_{k=0}^\infty \gamma^k \sum_{t=0}^\infty    \textbf{1}_{t \leq k} \mathbb{E}^\pi[R_t] \\
+        &=(1-\gamma)\sum_{k=0}^\infty \sum_{t=0}^\infty   \gamma^k \textbf{1}_{t \leq k} \mathbb{E}^\pi[R_t] \\
+        &=(1-\gamma)\sum_{t=0}^\infty  \sum_{k=0}^\infty   \gamma^k \textbf{1}_{t \leq k} \mathbb{E}^\pi[R_t] \\
+        &=(1-\gamma)\sum_{t=0}^\infty  \sum_{k=t}^\infty   \gamma^k  \mathbb{E}^\pi[R_t] \\ 
+        &\stackrel{(*)}{=}(1-\gamma)\sum_{t=0}^\infty  \frac{\gamma^t}{1-\gamma} \mathbb{E}^\pi[R_t] \\
+        &=\mathbb{E}^\pi [\sum_{t=0}^\infty  \gamma^t R_t] \\
+    \end{align*}
+\end{itemize}
+altough we used in $(*)$ that 
+$$
+\sum_{i=t}^\infty \gamma (1-\gamma)^{i-1} = (1- \gamma)^{t-1} \quad \iff \quad \sum_{i=t}^\infty  (1-\gamma)^{i-1} = \frac{(1- \gamma)^{t-1} }{\gamma}.
+$$
+In practice it is not important how $\gamma$ is chosen, but the convergence speed will later depend on this factor???
+---
+
+\defn{Value functions}{
+For a policy $\pi \in \Pi$ and $\gamma \in (0,1)$ and the function $Q:\mathcal{S} \times \mathcal{A} \to \mathbb{R}$ defined as
+$$
+\forall s,a: \quad Q^\pi (s,a) := \mathbb{E}_{s,a}^\pi [\sum_{t=0}^\infty \gamma^t R_t]
+$$
+is called the state action value function (Q-function). The value function or state value function is defined as
+$$
+\forall s \in \mathcal{S}: \quad V^\pi (s) := \mathbb{E}_{s}^\pi[\sum_{t=0}^\infty \gamma^t R_t] = \sum_{a \in \mathcal{A}_s} \pi_0 (a;s) Q^\pi (s,a)
+$$
+}
+As it is very difficult to calculate an infinite sum, we will now show that both of these objects, are solutions to particular equations, that are feasable to calculate.\\
+Note also that $V^\pi$ is a vector in $\mathbb{R}^{|\mathcal{S}|}$ and $Q^\pi$ is a matrix in $\mathbb{R}^{|\mathcal{S}|\times |\mathcal{A}|}$, where the action space could be huge. Thus the state value function is simpler.\\
+We will later though see that it is easier to deal with the $Q$-function.
+\prop{
+Bellman Equations:\\
+Suppose we have a stationary policy, then $Q^\pi$ and $V^\pi$ satisfy the following equations. First, for all $s\in \mathcal{S}$ and $a \in \mathcal{A}$
+$$
+Q^\pi (s,a) = r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} p(s^\prime ;s,a) \pi (a^\prime;s^\prime) Q^\pi (s^\prime ,a^\prime).
+$$
+Second, for all $s \in \mathcal{S}$:
+$$
+V^\pi (s) = \sum_{a \in \mathcal{A}_s} \pi (a;s) (r(s,a) + \gamma\sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a)V^\pi(s^\prime)).
+$$  
+}
+\pf{
+The idea in this proof is to go one step forward, when calculating the $Q/V$ value and then use the Markov Property, i.e. forget the step before.\\
+For all $(s,a)$ we have that
+\begin{align*}
+    &Q^\pi (s,a) \\
+    &= \mathbb{E}_{s,a}^\pi [\sum_{t=0}^\infty \gamma^t R_t] \\
+    &= \mathbb{E}_{s,a}^\pi [R_0] + \mathbb{E}_{s,a}^\pi [\sum_{t=1}^\infty \gamma^t R_t] \\
+    &= \mathbb{E}_{s,a}^\pi [R_0] + \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \mathbb{E}_{s,a}^\pi [\sum_{t=1}^\infty \gamma^t R_t \textbf{1}_{s^\prime \in \mathcal{S}, a^\prime \in \mathcal{A}_{s^\prime}}] \\
+    &= r(s,a) + \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \underbrace{\mathbb{E}_{s,a}^\pi [\sum_{t=1}^\infty \gamma^t R_t \mid S_1 =s^\prime ,A_1=a^\prime]}_{\stackrel{\text{Markov Property}}{=}\mathbb{E}_{s^\prime,a^\prime}^\pi [\sum_{t=0}^\infty \gamma^{t+1} R_t ] }  \mathbb{P}(S_1 =s^\prime ,A_1=a^\prime) \\
+    &= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \mathbb{E}_{s^\prime,a^\prime}^\pi [\sum_{t=0}^\infty \gamma^t R_t ] p(s^\prime;s,a) \pi(a^\prime;s^\prime) \\
+    &= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} Q^\pi (s^\prime,a^\prime) p(s^\prime;s,a) \pi(a^\prime;s^\prime) 
+\end{align*}
+and for the $V$ function we have for all $s \in \mathcal{S}$
+\begin{align*}
+    V^\pi (s) &\stackrel{Def}{=} \sum_{a \in \mathcal{A}_s} \pi (a;s) Q^\pi(s,a)\\
+    &= \sum_{a \in \mathcal{A}_s} \pi (a;s) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} Q^\pi (s^\prime,a^\prime) p(s^\prime;s,a) \pi(a^\prime;s^\prime) \right) \\
+    &= \sum_{a \in \mathcal{A}_s} \pi (a;s) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}}p(s^\prime;s,a) \sum_{a^\prime \in \mathcal{A}_{s^\prime}} Q^\pi (s^\prime,a^\prime)  \pi(a^\prime;s^\prime) \right) \\
+    &= \sum_{a \in \mathcal{A}_s} \pi (a;s) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}}p(s^\prime;s,a) V^\pi(s^\prime) \right)
+\end{align*}
+}
+Note that the two equations above are just two linear equations. The first is a Matrix equation and the second is a vector equation.\\
+
+\rmkb{
+Downsides:\\
+The big problem with this is approach is that if were to be only interested in the Q/V value of one $(s,a)$ pair, then we would still have to solve the Bellman equation for all state action pairs.
+}
+
+\cor{
+For a stationary policy $\pi \in \Pi_s$ the following relation holds for all $s,a$
+$$
+Q^\pi (s,a) = r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a)V^\pi (s^\prime).
+$$
+}
+Now we have derived a set of linear equations that we have to solve. To make it a little easier, we will now go over the Banach fixed point theorem in order to find numerically a solution. 
+\thm{Banach Fixed Point Theorem}{
+Let $(U;\|\cdot \|)$ be a banach space (complete normed vector space), $T:U \to U$ a contraction, i.e.
+$$
+\exists \lambda \in [0,1) \forall u_1,u_2 \in U: \quad \|Tu_1-Tu_2\| \leq \lambda \|u_1-u_2\|.
+$$
+Then 
+\begin{itemize}
+    \item there exists an unique fixed point $u^*$, i.e. $Tu^* =u^*$ and
+    \item for arbitrary $u_0 \in U$ the sequence $(u_n)_{n \in \mathbb{N}}$ defined by
+    $$
+    u_{n+1} := Tu_n =T^{n+1} u_0
+    $$
+    converges in $U$ to $u^*$.
+\end{itemize}
+}
+The idea of the BFT: Lets say we have a equation
+$$
+f(x) = g(f(x)),
+$$
+where we want to solve for $f$. In order to do so, we define the linear operator
+$$
+T: \{f: \mathbb{R} \to \mathbb{R}\} \to \{f: \mathbb{R}\to \mathbb{R}\}, f \mapsto (Tf)(\cdot) =: g(f(\cdot))
+$$
+If $T$ satisfies the BFT then we have that for all $f_0:$ $f_n := T^nf_0 \to f^*$, where $(Tf^*)(x)=f^*(x)$ for all $x \in \mathbb{R}$. This means that
+$$
+\forall x \in \mathbb{R}: f^*(x) = g(f^*(x)).
+$$
+Therefore, we have a numerical method on how to solve systems, as long as the operator is a contraction.\\
+Now we need show that the $Q$ and $V$ Values satisfy the BFT. We will as of now generalize the $Q$ and $V$ functions as linear operators, i.e. for every policy
+$$
+V^\pi (s) \in X := \{v: \mathcal{S} \to \mathbb{R}\}= \mathbb{R}^{|\mathcal{S}|} \quad  \text{ and }\quad  Q^\pi (s,a) \in Y := \{q: \mathcal{S}\times \mathcal{A} \to \mathbb{R}\}= \mathbb{R}^{|\mathcal{S}| \cdot |\mathcal{A}|}.
+$$
+Then $(X,\|\cdot \|_\infty)$ and $(Y,\|\cdot \|_\infty)$ are Banach spaces. Therefore, we will now redefine the Bellman equations as operators.
+
+\defn{Bellman expectation Operators}{
+Given a Markov decision model and a stationary policy $\pi \in \Pi_s$ we define $T^\pi:X\to X$ where
+$$
+(T^\pi v)(s) := \sum_{a \in \mathcal{A}_s} \pi(a;s) \cdot (r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) v(s^\prime))
+$$
+and $T^\pi: Y \to Y$ where
+$$
+(T^\pi q)(s,a) := r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_s} p(s^\prime;s,a) \pi(a^\prime;s^\prime) q (s,a)
+$$
+are both called Bellman expectation operators.
+}
+We denoted for both cases the operator as $T$. It will always be visible form the context, what we mean.\\
+In the Proposition, where we showed that the $Q$ and $V$ values are solutions of the Bellman equations, we thus already showed that
+$Q^\pi$ and $V^\pi$ are the fixed points of the Bellman expectation operators. What remains to be shown, is that this operator is a contraction.
+
+\thm{Bellman expectation operator is contraction}{
+Both Bellman expectation operators are contractions with constant $\gamma$ which is the discount factor. Their unique fixed points are
+$$
+T^\pi V^\pi = V^\pi \quad \text{ and } \quad T^\pi Q^\pi = Q^\pi.
+$$
+}
+\pf{
+For every $s \in \mathcal{S}$ it holds that
+\begin{align*}
+    \|T^\pi v_1 -T^\pi v_2\|_\infty &= \max_{s \in \mathcal{S}} \left| \sum_{a \in \mathcal{A}_s} \pi(a;s) \gamma\sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) (v_1(s^\prime)-v_2 (s^\prime)) \right| \\
+    &\leq \gamma \|v_1-v_2\|_\infty \max_{s \in \mathcal{S}} \left| \sum_{a \in \mathcal{A}_s} \pi(a;s) \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a)  \right| \\
+    &= \gamma \|v_1-v_2\|_\infty 
+\end{align*}
+and for every $(s,a) \in \mathcal{S} \times \mathcal{A}$ that
+\begin{align*}
+    \|T^\pi q_1 -T^\pi q_2\|_\infty &= \max_{(s,a) \in \mathcal{S}\times \mathcal{A}} \left| \gamma \sum_{a^\prime \in \mathcal{A}_{s^\prime}}  \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \pi(a^\prime;s^\prime) (q_1(s^\prime,a^\prime)-q_2 (s^\prime,a^\prime)) \right| \\
+    &\leq \gamma \|q_1-q_2\|_\infty \max_{(s,a) \in \mathcal{S}\times \mathcal{A}} \left|  \sum_{a^\prime \in \mathcal{A}_{s^\prime}}  \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \pi(a^\prime;s^\prime)  \right| \\
+    &= \gamma \|q_1-q_2\|_\infty.
+\end{align*}
+}
+We have now derived a method in deriving numerically the value of a policy. In order to find the optimal policy for every state action pair (or just state) we will now define an optimal policy and then find their respective operators and show that they are contractions and their unique fixed points will be the optimal policy.
+
+\defn{Optimal Policy and Optimal Value functions}{
+For a given MDP we define
+\begin{itemize}
+    \item Optimal state value function $V^* : \mathcal{S} \to \mathbb{R}$, where
+    $$
+    \forall s \in \mathcal{S}: \quad V^*(s):= \sup_{\pi \in \Pi} V^\pi (s)
+    $$
+    \item Optimal state action function $Q^*: \mathcal{S}\times \mathcal{A} \to \mathbb{R}$ where
+    $$
+    \forall s\in \mathcal{S},a \in \mathcal{A}: \quad Q^* (s,a) := \sup_{\pi \in \Pi} Q^\pi (s,a).
+    $$
+    \item A policy $\pi^* \in \Pi$ is called optimal, if and only if it satisfies
+    $$
+    \forall s \in \mathcal{S}: \quad V^{\pi^*}(s) = V^* (s).
+    $$
+\end{itemize}
+}
+Note that the optimal state (action) function was defined pointwise, i.e. $V^*$ or $Q^*$ could be choose different $\pi$ for two different states $s \neq s^\prime$. Thus it is absolutely not clear, weather optimal policies exist, as they are defined for all starting states!\\
+For ease we will assume that we are only in finite MDPs. The next results do not hold for infinite MDPs.\\
+Note that we could have defined the optimal policy in terms of $Q^\pi$, but in literature it is most common to define it over the state value function.
+\rmkb{
+We will later see, that for finite MDPs, there is a stationary deterministic policy that solves these Bellman optimality equations. 
+}
+
+We will now define the linear systems where the optimal $Q$ and $V$ functions are the solutions and the respective optimality operators.
+\defn{Bellman Optimality Operators}{
+Given a MDP we define
+\begin{itemize}
+    \item The non linear system of equations
+    $$
+    \forall s \in \mathcal{S}: \quad v(s) =\max_{a \in \mathcal{A}_s} \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) v(s^\prime) \right)
+    $$
+    is called Bellman optimality equations and the operator $T^* : X \to X$??? defined by
+    $$
+    (T^*v)(s) :=\max_{a \in \mathcal{A}_s} \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) v(s^\prime) \right)
+    $$
+    \item The non linear system of equations
+    $$
+    \forall s\in \mathcal{S},a \in \mathcal{A}: \quad q(s,a) =r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} q(s^\prime,a^\prime)
+    $$
+    is called Bellman optimality state action equation and the state action Bellman optimality operator $T^*: Y \to Y$??? is defined by  
+    $$
+    \forall s\in \mathcal{S},a \in \mathcal{A}: \quad (T^*q)(s,a) :=r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} q(s^\prime,a^\prime)
+    $$
+\end{itemize}
+}
+WO IST PI HIN???
+Again, both Bellman optimality operators will be distinguishable by the number of arguments.\\
+Again, we will now apply the Banach fixed point theorem.
+
+\lem{Monotonicity}{
+Both Bellman operators $T^\pi$ and $T^*$ are monotone, i.e.
+$$
+u_1 \leq u_2 \Rightarrow T^* u_1 \leq T^* u_2 \text{ and } T^\pi u_1 \leq T^\pi u_2.
+$$
+}
+
+
+\thm{}{
+The Bellman optimality operators are contractions and thus have unique fixed points.
+}
+\pf{
+---
+}
+
+\thm{}{
+The optimal value functions are the unique fixed points of the Bellman optimality operators, i.e.
+$$
+T^*V^* =V^* \text{ and } T^* Q^* =Q^*.
+$$
+Further, it holds that
+$$
+V^*(s) = \max_{a \in \mathcal{A}_s} Q^* (s,a).
+$$
+}
+
+\pf{
+
+The property of contraction was already shown. We will now show that $Q^*$ and $V^*$ are indeed satisfy the Bellman optimality equations.\\
+\textbf{Stationary Policies}:\\
+Let $\pi$ be a stationary policy. We will first show the Bellman optimality equation for $Q^*$. In order to differentiate easier, we define
+$$
+\bar{Q}^* (s,a) := \sup_{\pi \in \Pi_s} Q^\pi (s,a) \quad \text{and}\quad Q^* (s,a) := \sup_{\pi \in \Pi} Q^\pi (s,a) 
+$$
+and
+$$
+\bar{V}^* (s) := \sup_{\pi \in \Pi_s} V^\pi (s) \quad \text{and}\quad V^* (s) := \sup_{\pi \in \Pi} V^\pi (s) 
+$$
+We will begin by prooving the last property as this is very essential property in the existence of the optimal policy???\\
+We have
+\begin{align*}
+    \bar{V}^*(s) &:= \sup_{\pi \in \Pi_S} V^\pi (s) \\
+    &\stackrel{(*)}{=} \sup_{\pi \in \Pi_S}  \max_{a \in \mathcal{A}_s} Q^\pi (s,a)\\
+    &\stackrel{finite}{=}\max_{a \in \mathcal{A}_s} \sup_{\pi \in \Pi_S}   Q^\pi (s,a)\\
+    &= \max_{a \in \mathcal{A}_s}  Q^*(s,a)
+\end{align*}
+$(*)$ has to be shown:\\
+"$\leq$" \\
+\begin{align*}
+\sup_{\pi \in \Pi_S}  V^\pi (s) &=   \sup_{\pi \in \Pi_S} \sum_{a^\prime \in \mathcal{A}_s} \pi_0 (a^\prime;s) Q^\pi (s,a^\prime) \\
+&\leq \sup_{\pi \in \Pi_S} \max_{a \in \mathcal{A}_s} Q^\pi (s,a) \sum_{a^\prime \in \mathcal{A}_s} \pi_0 (a^\prime;s)  \\
+&= \sup_{\pi \in \Pi_S} \max_{a \in \mathcal{A}_s} Q^\pi (s,a) 
+\end{align*}
+"$\geq$"\\
+\begin{align*}
+\sup_{\pi \in \Pi_S} V^\pi (s) &= \sup_{\pi \in \Pi_S} \sum_{a \in \mathcal{A}_s} \pi (a;s) Q^\pi (s,a) \\
+ &\geq \sup_{\pi \in \Pi_S^D}  \sum_{a \in \mathcal{A}_s} \pi (a;s) Q^\pi (s,a)\\
+ &\stackrel{SimiliarToBelow}{=}  \sum_{a \in \mathcal{A}_s} \sup_{\pi \in \Pi_S^D}  \pi (a;s) Q^\pi (s,a)\\
+ &\geq  \sum_{a \in \mathcal{A}_s}\pi (a;s)  \sup_{\pi \in \Pi_S^D}  Q^\pi (s,a)\\
+  &\geq  \max_{a \in \mathcal{A}_s} \underbrace{\pi (a;s)}_{DiracMeasure}  \sup_{\pi \in \Pi_S^D}  Q^\pi (s,a)\\
+ &\geq \sup_{\pi \in \Pi}  \max_{a \in \mathcal{A}_s}  Q^\pi (s,a)\\
+ &= \max_{a \in \mathcal{A}_s} \sup_{\pi \in \Pi}    Q^\pi (s,a)
+\end{align*}
+Next, we will derive show the Bellman equations. We first use the Bellman equation inside of the supremum. For all $(s,a)$
+\begin{align*}
+    \bar{Q}^*(s,a) &= \sup_{\pi \in \Pi_s} Q^\pi (s,a)\\
+    &= \sup_{\pi \in \Pi_s} \left( r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} p(s^\prime;s,a) \pi(a^\prime;s^\prime) Q^\pi (s^\prime,a^\prime)  \right) \\
+    &=   r(s,a)+ \gamma \sup_{\pi \in \Pi_s} \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} p(s^\prime;s,a) \pi(a^\prime;s^\prime) Q^\pi (s^\prime,a^\prime)  \\
+    &\stackrel{(*)}{=}   r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} \underbrace{\sup_{\pi \in \Pi_s}  Q^\pi (s^\prime,a^\prime)}_{=\bar{Q}^* (s^\prime,a^\prime)}
+\end{align*}
+Although $(*)$ is not clear at all. We will now show it.\\
+"$\leq$":\\
+\begin{align*}
+    \sup_{\pi \in \Pi_s}\sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}}p(s^\prime;s,a) \pi(a^\prime;s^\prime) Q^\pi (s^\prime,a^\prime) 
+    &= \sup_{\pi \in \Pi_s} \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a) \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi(a^\prime;s^\prime) Q^\pi (s^\prime,a^\prime) \\
+    &\leq \sup_{\pi \in \Pi_s} \sum_{s^\prime \in \mathcal{S}} \ p(s^\prime;s,a) \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi(a^\prime;s^\prime) \sup_{\pi \in \Pi_s}Q^\pi (s^\prime,a^\prime) \\
+    &\leq \sup_{\pi \in \Pi_s} \sum_{s^\prime \in \mathcal{S}} \ p(s^\prime;s,a)  \max_{a \in \mathcal{A}_{s^\prime}}\sup_{\pi \in \Pi_S}Q^\pi (s^\prime,a) \underbrace{\sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi(a^\prime;s^\prime)}_{=1} \\
+    &=  \sum_{s^\prime \in \mathcal{S}} \ p(s^\prime;s,a)  \max_{a^\prime \in \mathcal{A}_{s^\prime}} \sup_{\pi \in \Pi_S}Q^\pi (s^\prime,a^\prime) 
+\end{align*}
+"$\geq$":\\
+This is a little harder. We will first find a lower bound that is even lower:
+$$
+\sup_{\pi \in \Pi_S}\sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}}p(s^\prime;s,a) \pi(a^\prime;s^\prime) Q^\pi (s,a)  \geq \sup_{\pi \in \Pi_S^D}   \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^\pi (s^\prime,a^\prime) 
+$$
+i.e. we only consider stationary deterministic policies. The benefit of doing this, is that not only do we have a finite sum, but also a finite supremum and thus it gets easier. We now show that in the case of deterministic stationary policies, we can interchange the sum. For ease of notation we define
+$$
+\sup_{\pi \in \Pi_S^D}\sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}}p(s^\prime;s,a) \pi(a^\prime;s^\prime) Q^\pi (s,a)   =: \sup_{\pi \in \Pi_S^D}\sum_{s^\prime \in \mathcal{S}} h(s,\pi(s))
+$$
+And now we want to show
+$$
+\sup_{\pi \in \Pi_S^D}\sum_{s \in \mathcal{S}} h(s,\pi(s)) = \sum_{s \in \mathcal{S}} \sup_{\pi \in \Pi_S^D} h(s,\pi(s)).
+$$
+\begin{itemize}
+    \item ["$\leq$"] Is trivial
+    \item ["$\geq$"] We will show this via contradiction. I.e. suppose
+    $$
+    \sup_{\pi \in \Pi_S^D}\sum_{s \in \mathcal{S}} h(s,\pi(s)) < \sum_{s \in \mathcal{S}} \sup_{\pi \in \Pi_S^D} h(s,\pi(s)).
+    $$
+    Then there exists a $\delta >0$ such that
+    $$
+    \sup_{\pi \in \Pi_S^D}\sum_{s \in \mathcal{S}} h(s,\pi(s)) < \sum_{s \in \mathcal{S}} \sup_{\pi \in \Pi_S^D} h(s,\pi(s)) -\delta .
+    $$
+    Next, choose an arbitrary policy $\tilde{\pi}$ such that for all $\epsilon>0$ it holds that
+    $$
+    \forall s \in \mathcal{S}: \quad h(s,\tilde{\pi}(s)) > \sup_{\pi \in \Pi_S^D} h(s,\pi(s))- \frac{\epsilon}{|\mathcal{S}|}.
+    $$
+    Then we can show that
+    \begin{align*}
+        \sum_{s \in \mathcal{S}} \sup_{\pi \in \Pi_S^D} h(s,\pi(s)) &< \sum_{s \in \mathcal{S}} h(s,\tilde{\pi}(s)) + \epsilon  \\
+        &< \sup_{\pi \in \Pi_S^D }\sum_{s \in \mathcal{S}} h(s,\pi(s)) + \epsilon  \\
+        &< \sum_{s \in \mathcal{S}} \sup_{\pi \in \Pi_S^D } h(s,\pi(s)) -\delta  + \epsilon 
+    \end{align*}
+    If we now choose $\delta > \epsilon$ we get a contradiction.
+\end{itemize}
+Now we can show "$\geq$":
+\begin{align*}
+    \sup_{\pi \in \Pi_S}\sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}}p(s^\prime;s,a) \pi(a^\prime;s^\prime) Q^\pi (s^\prime,a^\prime) &= \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \sup_{\pi \in \Pi_S}\sum_{a^\prime \in \mathcal{A}_{s^\prime}}\pi(a^\prime;s^\prime) Q^\pi (s^\prime,a^\prime) \\
+    &\geq \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \sup_{\pi \in \Pi_S}\max_{a^\prime \in \mathcal{A}_{s^\prime}} \pi(a^\prime;s^\prime) Q^\pi (s^\prime,a^\prime) \\
+    &\geq \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \sup_{\pi \in \Pi_S^D}\max_{a^\prime \in \mathcal{A}_{s^\prime}} \pi(a^\prime;s^\prime) Q^\pi (s^\prime,a^\prime) \\
+    &= \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \sup_{\pi \in \Pi_S^D}\max_{a^\prime \in \mathcal{A}_{s^\prime}}  Q^\pi (s^\prime,a^\prime) \\
+    &= \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} \sup_{\pi \in \Pi_S^D}  Q^\pi (s^\prime,a^\prime) .
+\end{align*}
+Next, we will look at the Bellman optimality equation for $V^*$:\\
+Here we will use the result that we showed in the beginning of the proof. For all $s \in \mathcal{S}$ we have
+\begin{align*}
+    \bar{V}^* (s) &= \max_{a \in \mathcal{A}_s} \bar{Q}^* (s,a)\\
+    &= \max_{a \in \mathcal{A}_s} \left( r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}}\bar{Q}^* (s^\prime,a^\prime)\right) \\
+    &= \max_{a \in \mathcal{A}_s} \left( r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \bar{V}^* (s) \right)
+\end{align*}
+\textbf{Non Stationary Policies}: Skipped.
+}
+Up to now we have not said nothing about the optimal policy! We have only showed that the optimal state (value) functions are unique fixed points of the Bellman optimality operator and that is suffices to only consider stationary policies for the optimal state (value) function. Even better is that the Bellman optimality equations hold for stationary deterministic policies (showed in Dynamic Programming Programming). This makes the set $\Pi$ a lot smaller and more possible to handle.
+\defn{Greedy Policy}{
+Given a function $q: \mathcal{S}\times \mathcal{A}\to \mathbb{R}$ then the following stationary deterministic policy
+$$
+\pi_q (s,a) := \begin{cases}
+    1 &, a \in argmax_a q(s,a) \\
+    0&, else
+\end{cases}
+$$
+is called greedy policy. We can also obtain the greedy policy from the value function $v: \mathcal{S} \to \mathbb{R}$ and then using the $Q-V$ transfer
+$$
+q_v (s,a) := r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) v(s^\prime)
+$$
+We then write $\pi_v$.
+}
+
+\lem{Bellman optimality Operator and Bellman operator for Greedy Policy are equivalent}{
+Suppose $\pi_q$ is the greedy policy obtained from $q$, then $T^* q =T^{\pi_q} q$. \\
+If q is obtained from $v$ then $T^* v= T^{\pi_v} v$.
+}
+\pf{
+Both follow very quickly from the definition of the greedy policy. For all $(s,a)$ we have
+\begin{align*}
+    (T^{\pi_q} q)(s,a) &= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} p(s^\prime;s,a) \pi_q(s^\prime;a^\prime) q(s^\prime,a^\prime) \\
+    &= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a)\cdot1\cdot \max_{a^\prime \in \mathcal{A}_{s^\prime}}   q(s^\prime,a^\prime)\\
+    &= T^*q(s,a)
+\end{align*}
+and for all $s\in \mathcal{S}$
+\begin{align*}
+    (T^{\pi_v} v)(s) &= \sum_{a \in \mathcal{A}_s} \pi_v (a;s)(r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) v(s^\prime)) \\
+    &= \max_{a \in \mathcal{A}_s} \left( 1\cdot (r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) v(s^\prime))\right) \\
+    &= T^* v(s).
+\end{align*}
+}
+
+\thm{Dynamic Programming Algorithm}{
+An optimal policy $\pi^* \in \Pi$ always exists and can be chosen as stationary deterministic. The optimal policy $\pi^* \in \Pi_S^D$ is the Greedy policy wrt. to $Q^*$ or $V^*$, i.e. solving the Bellman optimality equations and then playing Greedy.
+}
+\pf{
+We have already proven that the optimal state (action) value function $Q^*$ and $V^*$ exist and is the unique solution of $T^\pi$. We now have to show that the greedy policy obtained from this optimal value function is the optimal policy. 
+We first show $Q^* = Q^{\pi_{Q^*}}$
+\begin{align*}
+    Q^* =T^* Q^* = T^{\pi_{Q^*}} Q^* 
+\end{align*}
+Because both Bellman Operators have unique solutions and $T^{\pi_{Q^*}} Q^{\pi_{Q^*}} = Q^{\pi_{Q^*}}$, we have that $Q^{\pi_{Q^*}} = Q^*$.\\
+To show: $V^* = V^{\pi_{V^*}}$\\
+Using the property of the value function that we have proven in a different Theorem:
+$$
+V^* (s) = \max_{a \in \mathcal{A}_s} Q^* (s,a)
+$$
+and the definition $V^\pi (s) := \sum_{a \in \mathcal{A}_s} \pi (a;s) Q^\pi (s,a)$. This yields
+$$
+V^* (s) = \max_{a \in \mathcal{A}_s} Q^* (s,a) = \sum_{a \in \mathcal{A}_s} \pi_{Q^*} (a;s) Q^{\pi_{Q^*}} (s,a) = V^{\pi_{Q^*}} (s).
+$$
+Thus the state (action) value function of the greedy policy wrt. the optimal state (action) value function is equal to the optimal state (action) value function. This holds for every initial state $s \in \mathcal{S}$ and thus we have shown the definition of the optimal policy.
+}
+
+\rmkb{
+In Words:\\
+The optimal policy is a stationary determistic Policy that can be obtained and is Greedy wrt. to the optimal Value functions (either $Q$ or $V$).\\
+In the beginning we had the question wether there exists one policy that is optimal for all starting states, i.e.  
+$$
+\sup_{\pi \in \Pi}
+ (V^\pi (s))_{s \in \mathcal{S}} \stackrel{?}{=}
+ (\sup_{\pi_s \in \Pi}V^{\pi_s} (s))_{s \in \mathcal{S}} .
+ $$
+ Answer: Yes.
+}
+The focus from now on will be to find stationary optimal policies.
+
+\defn{Learning Strategy}{
+A sequence of policies $(\pi^n)_{n \in \mathbb{N}}$ for a MDP is called learning strategy, if $\pi^{n+1}$ only depends on the first $n$ rounds of learning.
+}
+We keep this definition vage. Our aim is to find learning strategies that converge as quickly as possible $\pi^{n} \to \pi^*$ or
+$$
+\|V^{\pi^n} - V^*\| \to 0, n \to \infty.
+$$
+We do not care about regret.\\
+There are typically two approaches
+\begin{itemize}
+    \item Value function based learning. Here the idea is to learn $V^*$ and then taking the argmax, i.e. Greedy. (Remember the optimal policy is greedy, thus if we know $V^*$ we get $\pi^*$ by playing Greedy.
+    \item Policy based learning: Tries to approximate the optimal policy $\pi^*$ directly.
+\end{itemize}
+
+\rmkb{
+The following two algorithms are called Dynamic programming algorithms. Their idea is to reduce one big problem into smaller subproblems and then using these solved subproblems to solve the big problem. In infinte time MDPs this does not really make sense, because the idea of dynamic programming is to go one step and restart the problem, but in infinite time this does not reduce complexity. Later in finite time MDPs, this will have an effect and we will revisit this idea.
+}
+\section{Basic tabular Value Iteration}
+The idea here is to use the Banach Fixed point theorem, that for any $V_0$ we have that
+$$
+(T^*)^nV_0 \to T^*V^*=V^*, \quad n \to \infty.
+$$
+Finally we only need to play greedy wrt. to $V^*$.
+
+\begin{algorithm}[H]
+\caption{Basic Value Iteration}
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{MDP and Accuracy $\epsilon>0$}
+Initialize $V\equiv0$ and $V_{new}\equiv 0$\\
+$\Delta :=1$\\
+\While{$\Delta > \epsilon$}{
+set $V:=V_{new}$
+\For{$s \in \mathcal{S}$}{
+$V_{new} (s) := \underbrace{\max_{a \in \mathcal{A}_s} \left( r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a)V(s^\prime) \right)}_{(T^*V)(s)}$
+}
+$\Delta := \max_{s \in \mathcal{S}} (|V_{new}(s)-V(s)|)$
+}
+\Output{$V:=V_{new} \approx V^*$}
+\end{algorithm}
+
+
+\thm{}{
+The Basic Value iteration algorithm terminates and the output satisfies
+$$
+\|V-V^*\|_{\infty} \leq \frac{\gamma \epsilon}{1-\gamma}.
+$$
+}
+\pf{
+For $v_{n+1}:= T^* v_n$ it holds that
+$$
+\|v_n -v_{n+1} \|_\infty \leq \|v_n -v^* \|_\infty  +\|v^* -v_{n+1} \|_\infty \stackrel{BFT}{\to} 0 , \quad n\to \infty.
+$$
+We define $V:= v_n$ where $\|v_n -v_{n-1} \|_\infty  < \epsilon$, i.e. the terminating condition of the algorithm. Then
+\begin{align*}
+    \|v_n -v^* \|_\infty &= \lim_{m \to \infty} \|v_n -v_{n+m} \|_\infty \\
+    &\stackrel{TelescopingSum}{=} \lim_{m \to \infty} \|\sum_{k=0}^{m-1} v_{n+k} -v_{n+k+1} \|_\infty \\
+    &\leq \lim_{m \to \infty}\sum_{k=0}^{m-1} \| v_{n+k} -v_{n+k+1} \|_\infty\\
+    &= \lim_{m \to \infty}\sum_{k=0}^{m-1} \| (T^*)^k v_{n} -(T^*)^k v_{n+1} \|_\infty \\
+    &\leq \lim_{m \to \infty}\sum_{k=0}^{m-1} \gamma^k \|  v_{n} - v_{n+1} \|_\infty \\
+    &= \|  v_{n} - v_{n+1} \|_\infty \sum_{k=0}^{\infty} \gamma^k  \\
+    &= \|  v_{n} - v_{n+1} \|_\infty \frac{1}{1-\gamma} \\
+    &\leq \|  v_{n} - v_{n-1} \|_\infty \frac{\gamma}{1-\gamma} \leq \epsilon \frac{\gamma}{1-\gamma} .
+\end{align*}
+}
+Because the output of Algorithms do not lead to optimal Value functions, but just in approximation, we need to specify, what polices are that are derived from approximate optimal value functions
+\defn{$\epsilon$-Optimal}{
+For $\epsilon >0$ we call a policy $\pi \in \Pi$ $\epsilon-Optimal$ if
+$$
+\forall s \in \mathcal{S}: \quad V^*(s) \leq V^{\pi}(s) + \epsilon \left( \iff \quad  |V^*(s)-V^{\pi}(s) | \leq \epsilon \right).
+$$
+}
+
+Remember that we can obtain the $Q$ function trough the state Value function $V$.
+\thm{}{
+Suppose that $V$ is the output from the Basic Value iteration algorithm, $Q$ is obtained from $V$ and $\pi_Q$ is the Greedy policy of $Q$, then $\pi_Q$ is $\frac{2 \epsilon\gamma}{1-\gamma}$-optimal.
+}
+\pf{
+Assume that $V$ is obtained from the algorithma and we then optain $V$ from the $Q-V$ transfer. Then define $\pi_Q := greedy (Q)$. We get the following relation
+\begin{align*}
+    T^* V(s) & = \max_{a \in \mathcal{A}_s} \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) V(s^\prime) \right) \\
+    & = \max_{a \in \mathcal{A}_s} Q(s,a)\\
+    &= \sum_{a \in \mathcal{A}_s} \pi_Q (a;s) Q(s,a)\\
+    &= \sum_{a \in \mathcal{A}_s} \pi_Q (a;s) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} p(s^\prime;s,a) \pi(a;s) Q(s^\prime,a^\prime) \right) \\
+    &= \sum_{a \in \mathcal{A}_s} \pi_Q (a;s) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a)  V(s^\prime) \right) \\
+    &=T^{\pi_Q} V
+\end{align*}
+Then for $V:=v_n := T^* v_{n-1}$ it holds that
+\begin{align*}
+    \| V^{\pi_Q} - V \|_\infty &\leq \| V^{\pi_Q} - T^*V \|_\infty +\| T^*V - V \|_\infty \\
+     &= \| T^{\pi_Q}V^{\pi_Q} - T^*V \|_\infty +\| T^*V - T^*v_{n-1} \|_\infty \\
+     &= \| T^*V^{\pi_Q} - T^*V \|_\infty +\| T^*V - T^* v_{n-1} \|_\infty \\
+     &\leq \gamma \| V^{\pi_Q} - V \|_\infty +\gamma\| V - v_{n-1} \|_\infty
+\end{align*}
+Which is equivalent to 
+$$
+(1-\gamma) \| V^{\pi_Q} - V \|_\infty  \leq \gamma\| V - v_{n-1} \|_\infty \quad \iff \quad \| V^{\pi_Q} - V \|_\infty \leq \frac{\gamma}{1-\gamma} \| V - v_{n-1} \|_\infty
+$$
+Now we can use from the previous proof that $\| V-V^* \|_\infty \leq \frac{ \gamma}{1-\gamma} \|v_n -v_{n-1}\|_\infty \leq \frac{ \epsilon\gamma}{1-\gamma}  $, where we used in the last step, that the algorithm terminates under the condition that the distance to the previous step is smaller than $\epsilon$. Using this we get that
+\begin{align*}
+    \| V^{\pi_Q}-V^* \|_\infty &\leq  \| V^{\pi_Q}-V \|_\infty +  \| V-V^* \|_\infty \\
+    &\leq \frac{\gamma}{1-\gamma} \| V - v_{n-1} \|_\infty + \frac{ \gamma}{1-\gamma} \|v_n -v_{n-1}\|_\infty\\
+    &= \frac{2 \gamma}{1-\gamma} \|v_n -v_{n-1}\|_\infty \leq \frac{2 \epsilon \gamma}{1-\gamma}
+\end{align*}
+We use here the Lemma that
+$$
+T^\pi V = T^* V \quad \iff \quad \pi= greedy(V)
+$$
+}
+In order to compare different algorithms we define the speed of convergence.
+\defn{Convergence of Order $\alpha$}{
+Suppose we have a normed space $(V,\|\cdot \|)$, then for a sequence $(y_n)_{n \in \mathbb{N}} \subset V$ with limit $v^* \in V$ we call it convergence of order $\alpha>0$, if
+$$
+\exists K<1 \forall n \in \mathbb{N}: \quad \|y_{n+1}-y^*\| \leq K \|y_n-y^*\|^{\alpha}.
+$$
+In the case that $\alpha =1$, we call it linear convergence.
+}
+Linear convergence should be called exponential convergence, because of
+$$
+\|y_{n+1}-y^*\| \leq K \|y_n-y^*\| \leq K^2 \|y_{n-1}-y^*\| \leq ... \leq K^n \|y_0-y^*\| \in \mathcal{O}(K^n).
+$$
+Because $T^*$ is a contraction, we have at least linear convergence of the Basic Value iteration Algorithm. The next theorem shows that this cannot be further improved.
+
+\thm{}{
+For all initializations the convergence order of the Basic Value Iteration algorithm is linear with constant $K = \gamma$. There is one initialization, where the convergence is exactly linear, i.e. there is equality with $K=\gamma$.
+}
+\pf{
+For $V_{n+1} :=T^* v_n$ it holds that
+$$
+\| v_{n+1}-V^*  \|_\infty= \| T^*v_{n}-T^*V^*  \|_\infty \leq \gamma \| v_{n}-V^*  \|_\infty.
+$$
+We actually do not get better than linear convergence, due to the following. If we initailize by $v_0 := V^* + k \textbf{1}$ we then get that
+\begin{align*}
+    \| v_1 - V^*  \|_\infty &= \| T^* v_0 - V^*  \|_\infty \\
+    &=  \| T^* (V^*+k\textbf{1} - V^*  \|_\infty \stackrel{(*)}{=} \| V^*+T^*k\textbf{1} - V^*  \|_\infty \\
+    &= \| \gamma k\textbf{1}  \|_\infty = \gamma \|  k\textbf{1}  \|_\infty \\
+    &= \gamma \| V^*+ k\textbf{1}-V^*  \|_\infty = \gamma \| v_0-V^*  \|_\infty
+\end{align*}
+Via induction it follows that 
+$$
+ \| v_n - V^*  \|_\infty =\gamma \| v_{n-1}-V^*  \|_\infty
+$$
+for all $n \in \mathbb{N}$
+}
+
+
+
+\rmkb{
+If the state space get bigger, then the vector $V$ gets larger and the norm $\|V_0-V^*\|_\infty$ increases, as the supremum over a larger set is larger.
+}
+
+\rmkb{
+Note that we could directly do the Banach fixed point theorem for $Q$ instead of doing the $Q-V$ transfer twice. This will be later done in $Q$-learning and SARSA. Further, note that we assumed knowledge of the transition functions. This is not always the case.
+}
+
+\section{Basic Policy Iteration (Actor Critic) algorithm}
+This will be our first class of real Reinforcement Learning algorithms, as this is not part of stochastic Control. The idea is as follows of Policy Iteration (Actor Critic): Initialize some Policy $\pi_0$ and then iterate between the following two steps
+\begin{itemize}
+    \item Policy Evaluation: Evaluate the current Policy $\pi$, by calculating $Q^\pi$ or $V^\pi$
+    \item Policy Improvement: Improve the current Policy. We will later see that we get an strict improvement of the Policy if the new policy $\pi^\prime = greedy (Q^\pi)$.
+\end{itemize}
+In contrast to Value Iteration, the Policy Iteration method is much more clever, as it uses more understanding of the Optimal Control Problem (because it knows that the optimal policy is greedy???).\\
+Value Iteration is the class of algorithms known as Value based methods and Policy Iteration is in the class of Policy based methods, as it works closely with the policy in the Policy improvement step.\\
+
+\rmkb{
+This method is called Actor Critc, as we always alternate between the actor and the Critic:
+\begin{itemize}
+    \item Critic: The Critic evaluates the current Policy $\pi$
+    \item Actor: The Actor improves the Policy.
+\end{itemize}
+}
+\subsection{Policy Evaluation}
+We will now discuss how we can calculate the Value function $V^\pi$ of a specific policy $\pi$. There are three ways of doing this.
+\begin{itemize}
+    \item Approximate the expectation within $Q^\pi$ by Monte Carlo Methods
+    \item Solve the Bellman expectation equation using linear Algebra methods
+    \item Use Banch Fixed Point theorem for the Operator $T^\pi$.
+\end{itemize}
+We will first discuss linear Algebra methods and then the Banach fixed point theorem.
+
+\rmkb{
+Recall that we can write the Bellman expectation operator for $s \in \mathcal{S}$ as
+$$
+(T^\pi v)(s) = \sum_{a \in \mathcal{A}_s} \pi (a;s) \left( r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) v(s^\prime)\right)
+$$
+We can write this as Matrix/vector Product as follows
+$$
+V^\pi = r^\pi + \gamma P^\pi V^\pi
+$$
+where
+$$
+P^\pi := \left( \sum_{ a \in \mathcal{A_s}} \pi(a;s) p(s^\prime;s,a) \right)_{(s,s^\prime) \in \mathcal{S}^2}
+$$
+and
+$$
+r^\pi := \left( \sum_{a \in \mathcal{A}_s} \pi(a;s) r(s,a) \right)_{s \in \mathcal{S}}
+$$
+where $P^\pi \in \mathbb{R}^{|\mathcal{S}|^2}$ and $r^\pi,V^\pi \in \mathbb{R}^{|\mathcal{S}|}$.
+}
+
+
+\rmkb{
+Check that the operator is $T^\pi = r^\pi + (\gamma P^\pi). $:
+\begin{align*}
+    V &= T^\pi V\\
+    &= \left( \sum_{a \in \mathcal{A}_s} \pi (a;s) (r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) V(s^\prime) \right)_{s \in \mathcal{S}} \\
+     &= \left( \sum_{a \in \mathcal{A}_s} \pi (a;s) r(s,a)\right)_{s \in \mathcal{S}} + \left( \sum_{a \in \mathcal{A}_s} \pi (a;s) \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) V(s^\prime) \right)_{s \in \mathcal{S}} \\
+     &= r_\pi + \gamma \left(\sum_{s^\prime \in \mathcal{S}}  \sum_{a \in \mathcal{A}_s} \pi (a;s)   p(s^\prime;s,a) V(s^\prime) \right)_{s \in \mathcal{S}} \\
+     &= r_\pi + \gamma \left(\sum_{s^\prime \in \mathcal{S}}  P^\pi(s,s^\prime) V(s^\prime) \right)_{s \in \mathcal{S}} \\
+     &=  r_\pi + \gamma \left( \langle P^\pi(s,\cdot),V \rangle\right)_{s \in \mathcal{S}} \\
+     &=  r_\pi + \gamma  P^\pi V 
+\end{align*}
+}
+
+
+\thm{}{
+The linear (affine) equation $V^\pi = r^\pi + P^\pi V^\pi$ has a unique solution given by
+$$
+V^\pi = (I-\gamma P^\pi)^{-1} r^\pi.
+$$
+}
+\pf{
+First, we need to know weather we can invert any parts of the matricies appearing in this equation. We can do this, because with the Banach fixed point theorem, there exists a unique solution and thus they are with LA1 inveritble. Thus we can calculate
+\begin{align*}
+    V^\pi = r^\pi +\gamma P^\pi V^\pi &\iff V^\pi-\gamma P^\pi V^\pi =r^\pi \\
+    &\iff V^\pi = (I-\gamma P^\pi)^{-1} r^\pi.
+\end{align*}
+}
+A important point to consider, is that calculating the state value function in this form is for programming more efficient, as loops are slower than doing matrix calculations.
+\rmkb{
+Looking at the perforamnce of this method yields that it is very slow, as inverting a matrix is of order $\mathcal{O}(n^3)$, i.e. very slow, where $n= |\mathcal{S}|$.\\
+In comparison, for the Banach fixed point theorem we do matrix multiplikations, which is of order $\mathcal{O}(n^2)$, which is faster.
+}
+
+
+\begin{algorithm}[H]
+\caption{Iterative Policy Evaluation (Naive)}
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{Policy $\pi \in \Pi,\ \epsilon > 0$}
+\Output{Approximation $V^n$}
+\BlankLine
+
+\textbf{Initialize} $V \equiv 0$,\ $V_{\text{new}} \equiv 0$\\
+$\Delta = 1$\\
+
+\While{$\Delta \ge \epsilon$}{
+  $V = V_{\text{new}}$\\
+  \For{$s \in \mathcal{S}$}{
+    \[
+      V_{\text{new}}(s)
+      \;=\;
+      \sum_{a \in \mathcal{A}_s}
+        \pi(a\,\vert\,s)
+        \sum_{s' \in \mathcal{S}}
+        \sum_{r \in \mathcal{R}}
+          p(s',\,r\,\vert\,s,\,a)\;
+          \bigl[r \;+\;\gamma\,V(s')\bigr]
+    \]
+  }
+  \[
+    \Delta
+    \;=\;
+    \max_{s \in \mathcal{S}}
+    \bigl\lvert V_{\text{new}}(s)\;-\;V(s)\bigr\rvert
+  \]
+}
+
+\Output{$V_{\text{new}} \;\approx\; V^\pi$}
+\end{algorithm}
+
+
+\thm{}{
+The algorithm above terminates and its output satisifies
+$$
+\|V-V^\pi\| \leq \frac{\gamma \epsilon}{1-\gamma}.
+$$
+}
+
+\pf{
+Is the exact same proof as with $T^*$, due to the fact that $T^\pi$ is also a contraction with $\gamma$ and nothing more was used. Thus we also get the exact same bound.
+}
+
+The Performance of Naive Policy iteration algorithm can be improved, if we do not update the value function for every state, but just for the once we deem as "relevant".
+\rmkb{
+Asynchroneous Updates are used for the Gauss-Seidel Algorithm. Here, the matrix $A$ only updates one entry of the vector $v_n$ , i.e. for $s \in \mathcal{S}$
+$$
+v_{n+1} (s) := (A v_n)(s)
+$$
+and then for another $s^\prime \in \mathcal{S}$ we have
+$$
+v_{n+2} = (Av_{n+1}) (s^\prime).
+$$
+But note that if we always choose different $s \in \mathcal{S}$ and do the matrix multiplikation $dim(A)$-often (lets assume Full rank), then it is not the same as doing standard matrix multiplication once. But, if we define the pointwise operator Bellman expectation operator
+$$
+T_s^\pi V (s^\prime ) = \begin{cases}
+    T^\pi V(s) &, s=s^\prime \\
+    V(s) &,s \neq s^\prime
+\end{cases}
+$$
+then the limit is the same as in the standard Bellman expectation operator. Then it holds that
+\begin{itemize}
+    \item [a)] $\bar{T}^\pi$ is different from $T^\pi$
+    \item [b)] $V^\pi$ is a fixed point of $\bar{T}^\pi$
+    \item [c)] $\bar{T}^\pi$ is a contraction.
+\end{itemize}
+}
+\pf{
+a) $T^\pi$ updates $v$ for all $s \in \mathcal{S}$, while $T^\pi_{s_1}$ only updates $v(s_1)$ and leaves the $v(s_i)$ unchanged for $i\neq 1$. If we now apply $T^\pi_{s_2}$ then the Bellman operator changes to
+$$
+(T^\pi_{s_2} \circ T^\pi_{s_1} ) (v)(s_2) = \sum_{a \in \mathcal{A}_{s_2}} \pi (a;s_2) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}\setminus \{s_1\}} p(s^\prime;s_2,a) v (s^\prime)+ \gamma p(s_1;s_2,a) T^\pi_{s_1} v (s_1) \right).
+$$
+But if we update the value functio $V^\pi$ it is the same
+\begin{align*}
+    (T^\pi_{s_2} \circ T^\pi_{s_1} ) (V^\pi)(s_2) &= \sum_{a \in \mathcal{A}_{s_2}} \pi (a;s_2) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}\setminus \{s_1\}} p(s^\prime;s_2,a) V^\pi (s^\prime)+ \gamma p(s_1;s_2,a) \underbrace{T^\pi_{s_1} V^\pi (s_1)}_{=T^\pi V^\pi (s_1) =V^\pi (s_1)} \right) \\
+    &= \sum_{a \in \mathcal{A}_{s_2}} \pi (a;s_2) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s_2,a) V^\pi (s^\prime) \right).
+\end{align*}
+b) We show pointwise via induction that $V^\pi$ is the fixed point of $T^\pi$.\\
+IA:
+\begin{align*}
+    \bar{T}^\pi (V^\pi) (s_1) &= (T^\pi_{s_k} \circ \cdots \circ T_{s_1}^\pi) (V^\pi) (s_1) \\
+     &= T_{s_1}^\pi (V^\pi) (s_1) = T^\pi (V^\pi) (s_1) = V^\pi (s_1)
+\end{align*}
+Due to the fact that for all $s \neq s_1$ now updates occurs, i.e. $T^\pi_{s_1} V^\pi (s) = V^\pi (s)$ it follows that
+$$
+(\bar{T}^\pi)(V^\pi) = (T^\pi_{s_k} \circ \cdots \circ T_{s_1}^\pi) (V^\pi) = (T^\pi_{s_k} \circ \cdots \circ T_{s_2}^\pi) (V^\pi).
+$$
+IS:
+\begin{align*}
+     \bar{T}^\pi (V^\pi) (s_{i+1}) &= (T^\pi_{s_k} \circ \cdots \circ T_{s_1}^\pi) (V^\pi) (s_{i+1}) \\
+     &= T_{s_{i+1}}^\pi (V^\pi) (s_{i+1}) = T^\pi (V^\pi) (s_{i+1}) = V^\pi (s_{i+1}).
+\end{align*}
+c) In the proof before we looked at $(\bar{T}^\pi)( V^\pi) (s) =( T_s^\pi)( V^\pi )(s)$, but for arbitrary value functions this does not hold (as in a)). Before doing the proof one would need to show that
+$$
+\forall i=1,...,K-1: \quad \| \tilde{u}^{(i)} - \tilde{v}^{(i)}  \|_\infty \leq \|u-v\|_\infty
+$$
+where $\tilde{u}^{(i)}  := (T_{s_i}^\pi \circ \cdots \circ T_{s_1}^\pi) (u)$. We dont show this. Then it follows that
+\begin{align*}
+    \| \bar{T}^\pi u-\bar{T}^\pi v \|_\infty &= \| (T_{s_K}^\pi \circ \cdots \circ T_{s_1}^\pi ) (u) -(T_{s_K}^\pi \circ \cdots \circ T_{s_1}^\pi ) ( v) \|_\infty  \\
+     &= \max_{i=1,...,K} \left| (T_{s_K}^\pi \circ \cdots \circ T_{s_1}^\pi ) (u)(s_i) -(T_{s_K}^\pi \circ \cdots \circ T_{s_1}^\pi ) ( v)(s_i) \right| \\
+     &= \max_{i=1,...,K} \left| (T_{s_i}^\pi \circ \cdots \circ T_{s_1}^\pi ) (u)(s_i) -(T_{s_i}^\pi \circ \cdots \circ T_{s_1}^\pi ) ( v)(s_i) \right| \\
+     &= \max_{i=1,...,K} \left| (T_{s_i}^\pi) (\tilde{u}^{(i-1)})(s_i) -(T_{s_i}^\pi ) ( \tilde{v}^{(i-1)})(s_i) \right| \\
+     &\leq \gamma  \max_{i=1,...,K} \left| \tilde{u}^{(i-1)}(s_i) -\tilde{v}^{(i-1)}(s_i) \right|  \\
+     &\leq \gamma  \max_{i=1,...,K} \left| \| \tilde{u}^{(i-1)} -\tilde{v}^{(i-1)}\|_\infty\right|  \\
+     &\leq \gamma \| u-v\|_\infty.
+\end{align*}
+}
+
+\begin{algorithm}[H]
+\caption{Iterative Policy Evaluation (Totally Asynchronous Updates)}
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{Policy $\pi \in \Pi,\ \epsilon > 0$}
+\Output{Approximation $V \approx V^\pi$}
+
+\BlankLine
+
+\textbf{Initialize} $V(s)= 0 \quad \forall s\in \mathcal{S}$\\
+$\Delta = 2\epsilon$\\
+
+\While{$\Delta \ge \epsilon$}{
+  $\Delta = 0$\\
+  \For{$s \in \mathcal{S}$}{
+    $v = V(s)$\\
+    \[
+      V(s)\;=\;
+      \sum_{a \in \mathcal{A}_s}
+        \pi\bigl(a \mid s\bigr)
+        \sum_{s'\in \mathcal{S}}
+        \sum_{r \in \mathcal{R}}
+          p\bigl(s',r \mid s,a\bigr)
+          \,\Bigl[r + \gamma\,V\bigl(s'\bigr)\Bigr]
+    \]
+    $\Delta = \max\bigl\{\Delta,\,\bigl|V(s) - v\bigr|\bigr\}$\\
+  }
+}
+
+\Output{$V$}
+\end{algorithm}
+\subsection{Policy Improvement}
+
+\defn{Policy Improvement}{
+For two policies $\pi,\pi^\prime \in \Pi$ we say that $\pi^\prime $ is an improvement of $\pi$ if and only if
+$$
+\forall s \in \mathcal{S}: \quad V^\pi (s) \leq V^{\pi^\prime} (s)
+$$
+and we call it a strict improvement if additionally
+$$
+\exists s^\prime \in \mathcal{S}: \quad  V^\pi (s^\prime) < V^{\pi^\prime} (s^\prime)
+$$
+}
+
+Clearly, if $\pi$ is not optimal, then there exists a policy $\pi^\prime$ that is a strict improvement.\\
+Further, as we can easily show (for stationary policies $\Pi_S^D$) we have for all $s \in \mathcal{S}$
+$$
+V^\pi (s) = \sum_{a \in \mathcal{A}_s} \pi(a;s) Q^\pi (s,a) \leq \max_{a \in \mathcal{A}_s} Q^\pi (s,a) = \sum_{a\in \mathcal{A}_s} \pi_{Q^\pi} (a;s) Q^\pi (s,a) 
+$$
+where $\pi_{Q^\pi}$ is the greedy policy wrt. $Q^\pi$. Thus, we have it looks like the Greedy policy wrt. $Q^\pi$ is at least as good as $\pi$. But we have not shown this yet! This will now be done in the next theorem.
+
+\thm{Policy Improvement Theorem}{
+Let $\pi,\pi^\prime \in \Pi_S$ be two stationary policies. 
+\begin{itemize}
+    \item We have
+    $$
+    \forall s \in \mathcal{S}: \quad  V^\pi (s) \leq \sum_{a \in \mathcal{A}_S} \pi^\prime(a;s) Q^\pi (s,a) \quad \Rightarrow\quad V^\pi (s)\leq V^{\pi^\prime}(s),
+    $$
+    i.e. a policy Improvement.
+    \item 
+    $$
+    \forall s \in \mathcal{S}: \quad  V^\pi (s) < \sum_{a \in \mathcal{A}_S} \pi^\prime(a;s) Q^\pi (s,a) \quad \Rightarrow\quad V^\pi (s)< V^{\pi^\prime}(s),
+    $$
+    i.e. a strict policy Improvement.
+    \item For every stationary policy $\pi \in \Pi_S$ the greedy policy wrt. $Q^\pi$ improves $\pi$.
+\end{itemize}
+}
+\pf{
+We use in the following always the three conditions of the Bellman expectation operator: Monotonicity, Contraction and $(T^\pi (v+r)) = T^\pi v + r$.\\
+i)\\
+Using the Q-V transfer we get
+\begin{align*}
+    V^\pi (s) &\stackrel{VSS}{\leq} \sum_{a \in \mathcal{A}_s} \pi^\prime (a;s)  Q^\pi (a,s) \\
+    & =\sum_{a \in \mathcal{A}_s} \pi^\prime (a;s) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) V^\pi (s^\prime) \right) \\
+    &= T^{\pi^\prime} V^\pi (s)
+\end{align*}
+Now using the monotinicty of $T^\pi$ and the condition above we get
+$$
+V^\pi (s) \stackrel{above}{\leq }T^{\pi^\prime} V^\pi (s) \stackrel{monotonicity}{\leq} T^{\pi^\prime} T^{\pi^\prime} V^\pi (s) \leq ... \leq \lim_{n \to \infty} (T^{\pi^\prime} )^n V^\pi (s) 
+$$
+Now using the Banach fixed point theorem, the above limit converges $\lim_{n \to \infty} (T^{\pi^\prime} )^n V^\pi  = V^{\pi^\prime}$ (uniformily, i.e. pointwise).\\
+ii)\\
+Analogously, for $"<"$ in the first equation 
+\begin{align*}
+    V^\pi (s) &\stackrel{VSS}{<} \sum_{a \in \mathcal{A}_s} \pi^\prime (a;s)  Q^\pi (a,s) \\
+    & =\sum_{a \in \mathcal{A}_s} \pi^\prime (a;s) \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) V^\pi (s^\prime) \right) \\
+    &= T^{\pi^\prime} V^\pi (s)
+\end{align*}
+Altough we have to note here that for a sequence $(a_n)_{n \in \mathbb{N}}$ with limit $a$ it holds
+$$
+\forall n: a_n > a \quad \Rightarrow \quad \lim_{n \to \infty} a_n \geq a
+$$
+and not $ \lim_{n \to \infty} a_n > a$ (Example: $a_n =1/n$)! But this is no problem for the proof, just a thing to be careful of, when considering the limit of $(T^{\pi^\prime})^n$.
+iii)\\
+In the motivation we have already shown that
+$$
+V^\pi (s) = \sum_{a \in \mathcal{A}_s} \pi(a;s) Q^\pi (s,a) \leq \max_{a \in \mathcal{A}_s} Q^\pi (s,a) = \sum_{a\in \mathcal{A}_s} \pi_{Q^\pi} (a;s) Q^\pi (s,a) 
+$$
+This is exactly the VSS for i), thus the policy improvement follows.
+}
+
+\lem{}{
+For $\pi,\pi^\prime \in \Pi_S$ and $\pi^\prime$ the greedy policy obtained from $Q^\prime$ then it holds that
+$$
+V^\pi =V^{\pi^\prime} (\text{or } Q^\pi = Q^{\pi^\prime}) \quad \Rightarrow \quad \text{$\pi,\pi^\prime$ are optimal.}
+$$
+}
+\pf{
+Because the with a Lemma before
+$$
+V^\pi =V^{\pi^\prime} \Rightarrow Q^\pi = Q^{\pi^\prime}
+$$
+we will now work with $Q$. We want to show that $Q^{\pi} = Q^*=Q^{\pi\prime}$. Let $\pi^\prime=greedy(Q^\pi)$ then
+\begin{align*}
+    Q^{\pi}(s,a)=Q^{\pi^\prime} (s,a) &= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} p(s^\prime;s,a) \pi^\prime (a;s) Q^{\pi^\prime} (s^\prime,a^\prime) \\
+    &= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^{\pi^\prime} (s^\prime,a^\prime) \\
+    &\stackrel{Equality}{=} r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^{\pi} (s^\prime,a^\prime) \\
+    &= T^* Q^\pi (s,a) 
+\end{align*}
+We showed that $ Q^\pi (s,a) $ and $ Q^{\pi^\prime } (s,a) $ are fixed points of $T^*$ and therefore both $\pi$ and $\pi^\prime$ are optimal.
+}
+
+From the above immediately follows that
+\cor{
+For non-optimal policy $\pi\in \Pi_S$ and the greedy policy $\pi^\prime = greedy(Q^\pi)$ it follows that the greedy policy is an strict improvement to $\pi$.
+}
+\pf{
+With one Lemma we had that the greedy Policy is an improvement wrt. to $\pi$. In the Lemma directly above we showed that if we have equality of $Q^\pi$ and $Q^{\pi^\prime}$ then both are optimal. Thus if would have a contradiction, if for the non optimal $\pi$ we had
+$$
+Q^\pi (s,a) = Q^{\pi^\prime} (s,a), \quad \text{and } \quad Q^\pi (s,a) > Q^{\pi^\prime} (s,a) \quad\text{is not possible.}
+$$
+}
+Because in all algorithms we can only approximate $Q^\pi$ and $V^\pi$ we define the following
+\defn{}{
+A policy $\pi \in \Pi_S$ is called
+\begin{itemize}
+    \item soft, if it satisfies
+    $$
+    \forall s \in \mathcal{S},a \in \mathcal{A}_s: \pi (a;s) >0 .
+    $$
+    \item $\epsilon$-soft for some $\epsilon \in (0,1]$ if
+    $$
+    \forall s \in \mathcal{S},a \in \mathcal{A}_s: \pi (a;s) > \frac{\epsilon}{|\mathcal{A}_s|} .
+    $$
+    (Note: We need to divide by $|\mathcal{A}_s|$ in order to ensure the lower bound stays below 1 and $1=\sum_{a \in \mathcal{A}_s} \pi (a;s) \geq \epsilon$).
+    \item $\epsilon$-greedy wrt. $Q$, if we play the best action in state $a^*_s$ with probability $(1-\epsilon)$ and all other \textbf{at least} uniformly on $\mathcal{A}_s \setminus \{a^*_s\}$, i.e.
+    $$
+    \pi (a;s) = \begin{cases}
+        1-\epsilon+ \frac{\epsilon}{|\mathcal{A}_s|} &, a=a^*_s\\
+        \frac{\epsilon}{|\mathcal{A}_s|} &, else
+    \end{cases}
+    $$
+\end{itemize}
+}
+Similar to the $\epsilon$-greedy learning strategies in stochastic bandits, that grow with linear regret, $\epsilon$-greedy policies for MDPs cannot be optimal as they play a non optimal policy with positive probability. So they typically cannot be guaranteed to improve policies. But we can show that they can improve $\epsilon$-soft policies
+\prop{
+Let $\pi \in \Pi_S$ be an $\epsilon$-soft policy and $\pi^\prime $ the respective $\epsilon$-greedy policy wrt. $Q^\pi$, then $\pi^\prime$ is an improvement to $\pi$.
+}
+\pf{
+We will now show the condition of the policy improvement theorem.
+\begin{align*}
+    V^\pi (s) &= \sum_{a \in \mathcal{A}_s} \pi (a;s) Q^\pi (s,a) \\
+    &= \sum_{a \in \mathcal{A}_s} \pi (a;s) Q^\pi (s,a) + \sum_{a \in \mathcal{A}_s} \frac{\epsilon}{|\mathcal{A}_s|} Q^\pi (s,a)-\sum_{a \in \mathcal{A}_s} \frac{\epsilon}{|\mathcal{A}_s|} Q^\pi (s,a) \\
+    &=\sum_{a \in \mathcal{A}_s} \frac{\epsilon}{|\mathcal{A}_s|} Q^\pi (s,a)+ \sum_{a \in \mathcal{A}_s} (\pi (a;s)-\frac{\epsilon}{|\mathcal{A}_s|} ) Q^\pi (s,a) \\
+    &=\sum_{a \in \mathcal{A}_s} \frac{\epsilon}{|\mathcal{A}_s|} Q^\pi (s,a)+(1-\epsilon) \sum_{a \in \mathcal{A}_s} \underbrace{\frac{ \pi (a;s)-\frac{\epsilon}{|\mathcal{A}_s|} }{1-\epsilon}}_{\geq 0, \epsilon-\text{soft}} Q^\pi (s,a) \\
+    &\leq\sum_{a \in \mathcal{A}_s} \frac{\epsilon}{|\mathcal{A}_s|} Q^\pi (s,a)+(1-\epsilon) \max_{a^\prime \in \mathcal{A}_s}  Q^\pi (s,a^\prime)  \underbrace{\sum_{a \in \mathcal{A}_s} \frac{ \pi (a;s)-\frac{\epsilon}{|\mathcal{A}_s|} }{1-\epsilon}}_{=\frac{1-\epsilon}{1-\epsilon}}\\
+    &= \sum_{a \in \mathcal{A}_s\setminus \{a^*_s\}} \frac{\epsilon}{|\mathcal{A}_s|} Q^\pi (s,a)+(1-\epsilon) \max_{a^\prime \in \mathcal{A}_s}  Q^\pi (s,a^\prime) + \frac{\epsilon}{|\mathcal{A}_s|} \max_{a^{\prime} \in \mathcal{A}_s} Q^\pi (s,a) \\
+    &= \sum_{a \in \mathcal{A}_s} \pi^\prime (a;s)  Q^\pi (s,a).
+\end{align*}
+}
+
+\subsection{Policy Iteration algorithms (tabular actor critic)}
+We now alternate between the steps of Policy evaluation and improvement and thus get the Policy Iteration Algorithm in its most simple form.
+
+\begin{algorithm}[H]
+\caption{Greedy Exact Policy Iteration (Actor-Critic)}
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{initial policy $\pi \in \Pi$, initial value function $V$}
+
+\textbf{Initialize} $V_{\mathrm{new}},\,\pi_{\mathrm{new}}$\\
+$stop = \text{False}$\\
+
+\While{$stop = \text{False}$}{
+  \tcp{Policy Evaluation (critic): compute $V^\pi$ (e.g.\ via Bellman equation).}
+  \[
+    Q^\pi(s,a) 
+    = \sum_{s' \in \mathcal{S}}
+      \sum_{r \in \mathcal{R}}
+      p\bigl(s',r ; s,a\bigr)
+      \;\Bigl[r + \gamma\,V\bigl(s'\bigr)\Bigr]
+  \]
+
+  \tcp{Policy Improvement: derive greedy policy $\pi_{\mathrm{new}}$ from $Q^\pi$.}
+  \If{$Q^{\pi_{\mathrm{new}}} = Q^\pi$}{
+    $stop = \text{True}$
+  }
+    $\pi = \pi_{\mathrm{new}}$
+  
+}
+\Return{$\pi^*$} \\
+\Output{optimal policy $\pi^* \in \Pi$}
+\end{algorithm}
+
+
+\thm{Greedy exact policy iteration}{
+Initialized in any policy the algorithm above terminates in finite number of iterations (at most $|\mathcal{A}|\cdot |\mathcal{S}|$ steps (this is the number of deterministic possible)) in a finite MDP and its output is the solution of the Bellman optimality equation and thus $\pi^*$.
+}
+\pf{
+First, note that in every improvement step, we have a strict improvement as long as we have not reached the optimal policy. Because the Bellman Equation has a unique solution, we never visit a policy twice, because every Policy only has one Q-Value. Finally, due to the fact that there are only finitely many deterministic policies, the time needed to reach optimal policy is at most the number of policies that exist, i.e. $|\mathcal{A}|\cdot |\mathcal{S}|$.
+}
+
+\subsection{Quick comparison of Value iteration and Policy Iteration}
+Policy Iteration (PI) and Value iteration (VI) are very similiar: Let $\pi_n$ be the policy obtained from PI (i.e. $\pi_n = greedy (V^{\pi_{n-1}})$) at step $n \in \mathbb{N}$ then
+$$
+V^{\pi_n}\stackrel{(n \to \infty)}{\leftarrow} T^{\pi_n} V^{\pi_{n-1}} = T^* V^{\pi_{n-1}} \stackrel{(n \to \infty)}{\rightarrow} V^*
+$$
+Thus, Value iteration is approximating $V^\pi$ always using one "Banach fixed point theorem step", i.e. for an initial vector $V_0$ we have
+\begin{center}
+    
+
+\begin{tikzpicture}[
+    >=Stealth,
+    every node/.style={text width=3cm, align=center} % fix node width to force wrapping if needed
+]
+
+% First policy and Q
+\node (pi0) {\(T^{\pi_0} V_0\)};
+\node (q0) [below=1.2cm of pi0] {\(\lim_{k \to \infty} (T^{\pi_0})^k V_0 =V^{\pi_0}\)};
+\draw[->] (pi0) -- (q0);
+
+% Second policy and Q
+\node (pi1) [right=2.0cm of pi0] {\(T^{\pi_1} V^{\pi_{0}}\)};
+\node (q1) [below=1.2cm of pi1] {\(\lim_{k \to \infty} (T^{\pi_1})^k V^{\pi_{0}} = V^{\pi_1}\)};
+\draw[->] (pi1) -- (q1);
+
+% Dotted path to nth policy
+\node (pin) [right=2.5cm of pi1] {\(T^{\pi_n} V^{\pi_{n-1}}\)};
+\node (qn) [below=1.2cm of pin] {\(\lim_{k \to \infty} (T^{\pi_n})^k V^{\pi_{n-1}} = V^{\pi_n}\)};
+\draw[->] (pin) -- (qn);
+
+% Horizontal connections
+\node (v) [right=2.0cm of pin, yshift=-0.6cm] {\(VI\)};
+\node (v0) [below=0.1cm of pi0] {\(\)};
+\draw[->] (v0) -- (v);
+
+\node (Q) [right=2.0cm of qn, yshift=0.8cm] {\(PI\)};
+\node (q0) [above=0.1cm of q0] {\(\)};
+\draw[->] (q0) -- (Q);
+\end{tikzpicture}
+\end{center}
+VI only does one step and PI multiple.\\
+Performance: First, it is important to note that Policy iteration and Value iteration have the same upper bound, but lower bounds are not clear (not done here).\\
+\textbf{1. Computational costs vs. Speed}:\\
+We define 
+$$
+T^n := (T^{\pi_n} \circ .... \circ T^{\pi_0})
+$$
+where $\pi_n := greedy(V^{\pi_{n-1}})$. Then due to $T^* V=T^{\pi_V} V$ for $\pi_V := greedy(V)$ we have for every initial vector $V$:
+$$
+\lim_{n\to \infty} T^n V= V^* = \lim_{n \to \infty} (T^*)^n V.
+$$
+This is Value iteration. Now due to
+\begin{align}
+    \lim_{n\to \infty} T^n V & = \lim_{n\to \infty} (T^{\pi_n} \circ .... \circ T^{\pi_0}) V =\lim_{n\to \infty} ((T^{\pi_n})^2 \circ .... \circ (T^{\pi_0})^2) V\nonumber \\
+    &= ... = \lim_{n\to \infty}\lim_{k\to \infty} ((T^{\pi_n})^{k} \circ .... \circ (T^{\pi_0})^{k}) V 
+\end{align}
+we define
+$$
+T^n_k := (T^{\pi_n})^{k} \circ .... \circ (T^{\pi_0})^{k}) 
+$$
+and get
+$$
+\lim_{n\to \infty} \lim_{k \to \infty} T^n_k V= V^*.
+$$
+This is policy iteration. Due to the fact that $cost(T^\pi) < cost (T^*)$ choose $k\in \mathbb{N}$ such that
+$$
+k\cdot n\cdot cost(T^\pi) \leq n \cdot cost (T^*), \quad n \in \mathbb{N}.
+$$
+Using contractions it holds for every initial vector $V:$
+$$
+\|T^n_k V - V^*\|_\infty \leq \gamma^{kn} \| V - V^*\|_\infty  \quad \text{ and } \quad \|T^n V - V^*\|_\infty  \leq \gamma^n \|V - V^*\|_\infty .
+$$
+Thus, for the same costs PI is better than VI by a factor of $\gamma^k$.\\
+
+\textbf{2. Variance of $T^\pi$ and $T^*$:}\\
+Next, we show that the standard Monte Carlo Estimator for 
+$$
+T^\pi Q (s,a) = \mathbb{E}_{s,a}^\pi [R_0 + \gamma Q(S_1,A_1)]
+$$
+is smaller than the one for
+$$
+T^* Q (s,a) = \mathbb{E}_{s,a}^\pi [R_0 + \gamma \max_{a^\prime \in \mathcal{A}_{S_1}}Q(S_1,a^\prime)].
+$$
+This is due to: For all $s \in \mathcal{S}$
+\begin{align}
+    \max_{a \in \mathcal{A}_s} Q(s,a) - \mathbb{E}[\max_{a \in \mathcal{A}_S} Q(S,a)] &=   \mathbb{E}[\max_{a \in \mathcal{A}_s} Q(s,a)-\max_{a \in \mathcal{A}_S} Q(S,a)]  \nonumber \\
+    &\geq\mathbb{E}[ Q(s,a^\prime)-Q(S,a^{\prime\prime})] 
+\end{align}
+for arbitrary $a^\prime,a^{\prime\prime} \in \mathcal{A}_s$. This yields
+\begin{align*}
+    \mathbb{V}[\max_{a \in \mathcal{A}_s} Q(S_1,a)] &= \sum_{s \in \mathcal{S}} \mathbb{P}(S_1=s) \left( \max_{a \in \mathcal{A}_s} Q(s,a) - \mathbb{E}[\max_{a \in \mathcal{A}_s} Q(S_2,a)] \right) ^2 \\
+     &= \sum_{s \in \mathcal{S}} \mathbb{P}(S_1=s) \left( \max_{a \in \mathcal{A}_s} Q(s,a) - \mathbb{E}[\max_{a \in \mathcal{A}_s} Q(S_2,a)] \right) ^2 \sum_{a \in \mathcal{A}_s} \mathbb{P}(A_1 =a) \\
+     &\stackrel{above}{\geq} \sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}_s} \mathbb{P}(S_2=s) \left(  Q(s,a) - \mathbb{E}[Q(S_2,A_2)] \right) ^2  \mathbb{P}(A_1 =a) \\
+     &=\mathbb{V}[Q(S_1,A_1)].
+\end{align*}
+Therefore,
+$$
+\mathbb{V}[R_0 + \gamma \max_{a \in \mathcal{A}_{S_1}}Q(S_1,a)] \geq \mathbb{V}[R_0 + \gamma Q(S_1,A_1)].
+$$
+If the Environment has a high variance, i.e. the conditional distribution $(S \mid S=s,A=a)$ has high a variance, then $T^*$ handles this worse than $T^\pi$. 
+
+\textbf{3. Connection to Markov Chains:}\\
+\defn{Mixing Times}{
+For a Markov Chain $(X_n)_{n \in \mathbb{N}}$ taking values in $(E,\mathcal{B}(E))$ with unique stationary distribution $\nu$ we define the mixing time as
+$$
+\tau_{mix}(\epsilon) := \min \{n \in \mathbb{N} \mid \max_{x \in E} \|\mathbb{P}_x(X_n=\cdot )- \nu (\cdot)\|_{TV} \leq \epsilon\}, \quad \epsilon>0,
+$$
+where
+$$
+\|\mu-\nu\|_{TV} = \tfrac12\sum_{y\in\mathcal{S}}|\mu(y)-\nu(y)|.
+$$
+is called total variation.
+}
+The mixing time discribes the minimum time that is needed such that the MCMC Chain has at least a distance of $\epsilon$ to the stationary distribution wrt. $\|\cdot\|_{TV}$ .
+
+\defn{Spectral Gap}{
+For a transition matrix $P \in [0,1]^{n\times n}$ with eigenvalues $0\leq \lambda_n \leq ....\leq \lambda_2 \leq \lambda_1 = 1$ we define
+$$
+Gap(P) := 1- |\lambda_2|.
+$$
+}
+The smaller $|\lambda_2|$ is, the quicker the Markovchain "forgets" initial conditions.
+
+\lem{}{
+For an irreducible, lazy and reversible Markov Chain with unique stationary distribution $\nu$ it holds that
+$$
+\tau_{mix} (\epsilon) \leq \frac{1}{Gap(P)} \left( \log (\frac{1}{\min_x \nu(x)}) + \log (\frac{1}{\epsilon}) \right), \quad \epsilon >0.
+$$
+}
+\pf{
+David A. Levin, Yuval Peres, Elizabeth L. Wilmer: Markov Chains and Mixing Times, American Mathematical Society, 2009. Theorem 12.4 (Page 189).
+}
+
+\rmkb{
+Thus, if we consider the MCMC-algorithm, it converges faster (i.e. faster mixing time), if the Spectral Gab of the transition matrix $P$ is high.\\
+Similar to the MCMC method we can interpret in VI the connection of the Spectral Gap to the speed of the method, because the transition matrix $p(s^\prime;s,a)$ is a probability Matrix and $(S,A)$ is Markov Chain. Although we would need to assume irreducibility, lazyness and reversibility on the transition probabilities. And even if $p(s^\prime;s,a)$ satisfies all these conditions, it is not clear wether the result of speed applies to $T^\pi$ or even $T^*$. (Probably not $T^*$ as it is non linear).
+}
+\textbf{4. Application to Windy Cliff Walk:}\\
+In Windy Cliff walk if the transition probabilities are deterministic (no wind) the variance is zero. As the wind increases, the variance of transition probabilities increases and the performance of VI should get worse and worse compared to PI. Further, as long as the Spectral Gap of $p(s^\prime;s,a)$ increases PI should improve in performance. Finally, in all cases with the same computational costs, PI will be better than VI.
+
+\prop{(Vergleich der Mischzeiten via Spektrallücken)
+\label{prop:mixing_comparison}
+Seien $P, P'$ zwei irreduzible, lazy und reversible Transition-Matrizen auf demselben endlichen Zustandsraum $\mathcal{S}$. Bezeichne
+\[
+\mathrm{gap}(P) \;=\; 1 - \lambda_2(P)
+\quad\text{und}\quad
+\mathrm{gap}(P') \;=\; 1 - \lambda_2(P'),
+\]
+wobei $\lambda_2(\cdot)$ den zweitgrößten Eigenwert in Absolutbetrag bezeichnet. Beide Matrizen besitzen jeweils eine eindeutige stationäre Verteilung $\nu$ bzw. $\nu'$, und wir definieren die Mischzeiten gemäß
+\[
+\tau_{mix}(\epsilon) \;=\;
+\min \Bigl\{ n \in \mathbb{N} \;\Big|\; \max_{x\in \mathcal{S}} 
+\bigl\|\mathbb{P}_x(X_n = \cdot) - \nu(\cdot)\bigr\|_{TV}
+\;\le\;\epsilon \Bigr\},
+\]
+bzw. analog für $P'$. 
+
+Gilt nun 
+\[
+\mathrm{gap}(P') \;>\;\mathrm{gap}(P),
+\]
+so folgt aus dem Spektrallücken-Formalismus, dass
+\[
+\tau_{mix}'(\epsilon) \;<\;\tau_{mix}(\epsilon)\quad\text{für jede } \epsilon>0.
+\]
+Mit anderen Worten, die Markov-Kette mit der größeren Spektrallücke besitzt eine (asymptotisch) kürzere Mischzeit und konvergiert schneller zu ihrer stationären Verteilung.
+}
+\pf{
+Dies ist eine direkte Folge der Standardabschätzungen zur Mischzeit irreduzibler, lazy und reversibler Markov-Ketten (vgl.\ Theorem~12.4 in Levin--Peres--Wilmer: \emph{Markov Chains and Mixing Times}). Dort wird u.a.\ gezeigt, dass
+\[
+\tau_{mix}(\epsilon) 
+\;\le\; \frac{1}{\mathrm{gap}(P)}\,\Bigl(\log\bigl(\tfrac{1}{\nu_{\min}}\bigr)+\log\bigl(\tfrac{1}{\epsilon}\bigr)\Bigr), 
+\]
+wobei $\nu_{\min} = \min_{x\in\mathcal{S}}\nu(x)$ und $\mathrm{gap}(P) = 1 - \lambda_2(P)$. Eine analoge Ungleichung gilt für $P'$. Wegen 
+$\mathrm{gap}(P')>\mathrm{gap}(P)$ 
+ergibt sich unmittelbar 
+$\tau_{mix}'(\epsilon) < \tau_{mix}(\epsilon)$
+für kleine $\epsilon>0$.
+}
+
+\vspace{1em}
+
+\prop{(Spektrallücke und beschleunigte Policy-Evaluation)
+\label{prop:spectral_gap_policy_eval}
+Betrachte ein MDP mit endlicher Zustandsmenge $\mathcal{S}$ und festem Diskontfaktor $0<\gamma<1$. Sei $\pi$ eine stationäre, stochastische Politik und 
+\[
+P^\pi(s, s') \;=\;\sum_{a \in \mathcal{A}_s} \pi(a; s)\;p(s';\,s,a)
+\]
+die zugehörige Transitionsmatrix, wobei $p(s';\,s,a)$ die Wahrscheinlichkeit bezeichnet, von Zustand $s$ durch Ausführung von Aktion $a$ nach $s'$ zu gelangen. Angenommen, $P^\pi$ ist irreduzibel, lazy und reversibel, und es existiert eine eindeutige stationäre Verteilung $\nu^\pi$. 
+
+Sei $\pi'$ eine zweite Politik mit analogen Eigenschaften. Falls
+\[
+\mathrm{gap}(P^{\pi'}) \;>\;\mathrm{gap}(P^\pi),
+\]
+so gilt: Die stochastischen Prozesse $(X_n)$ nach $P^{\pi'}$ \emph{mischen} schneller. Bei Verfahren zur Policy-Evaluation (z.\,B.\ Monte-Carlo- oder Temporal-Difference-Methoden) führt dies zu einer schnelleren Konvergenz auf die wahren Werte $Q^{\pi'}$ bzw.\ $V^{\pi'}$ im Vergleich zur Evaluierung unter $\pi$.
+}
+\pf{
+Die Policy-Evaluation basiert auf wiederholten Besuchen der Markov-Kette unter Politik $\pi$. Eine größere Spektrallücke $\mathrm{gap}(P^{\pi'})$ impliziert eine kürzere Mischzeit $\tau_{mix}^{\pi'}(\epsilon)$. Für Monte-Carlo- oder TD-Verfahren bedeutet dies, dass die Zustandsverteilungen sich schneller an ihre stationäre Verteilung anpassen, was statistisch gesehen die Varianz von Schätzungen für $Q^\pi$ und $V^\pi$ reduziert und somit zu schnelleren Konvergenzraten führt. 
+}
+
+\vspace{1em}
+
+\prop{(Policy Iteration und Folgen von Transitionsmatrizen)
+\label{prop:sequence_policy}
+Sei $(\pi_k)_{k\in\mathbb{N}}$ eine \emph{Folge} von Politiken, die während einer Policy Iteration (oder deren Varianten) entsteht. Jede Politik $\pi_k$ besitzt eine zugehörige Transitionsmatrix $P^{\pi_k}$, welche irreduzibel, lazy und reversibel ist, mit eindeutiger stationärer Verteilung $\nu^{\pi_k}$. 
+
+Ist für alle $k$ 
+\[
+\mathrm{gap}(P^{\pi_k}) \;\ge\;\gamma_0 > 0,
+\]
+mit einer \emph{konstanten} Untergrenze $\gamma_0$, so konvergieren die zugehörigen Policy-Evaluation-Schritte (z.\,B.\ mittels Monte-Carlo auf $P^{\pi_k}$) in jeder Iteration $k$ \emph{gleichartig schnell}. Weiterhin, falls sich die Spektrallücke sogar \emph{vergrößert} mit $k$, kann man strengere (bessere) Konvergenzabschätzungen von Iteration zu Iteration formulieren.
+}
+\pf{
+Die wesentliche Idee ist, dass jeder Evaluationsschritt in einer Iteration $k$ (zu Politik $\pi_k$) ein stochastisches Verfahren ist, das auf der Markov-Kette $P^{\pi_k}$ basiert. Falls sämtliche $P^{\pi_k}$ eine Spektrallücke oberhalb eines festen $\gamma_0$ aufweisen, sind die zugehörigen Mischzeiten $\tau_{mix}^{\pi_k}(\epsilon)$ einheitlich nach oben beschränkt. Damit erhält man eine gleichförmige Konvergenzgeschwindigkeit für alle Teilschritte der Policy Iteration. Wenn $\mathrm{gap}(P^{\pi_{k+1}}) > \mathrm{gap}(P^{\pi_k})$, verbessert sich diese Geschwindigkeit sogar von einer Iteration zur nächsten.
+}
+
+\end{document}

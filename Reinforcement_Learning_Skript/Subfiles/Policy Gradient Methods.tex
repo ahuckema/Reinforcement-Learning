@@ -1,0 +1,779 @@
+\documentclass[../main.tex]{subfiles}  % verweist auf die Master‑Datei
+\begin{document}
+
+
+
+We now take a completely different view on optimal control problems. The theory in the following is more complex and less understood. Thus the following will be less complete. We start with a policy gradient method, where we solve the optimal control problem numerically for the value function. But the difference is that we do not do this for the entire vector, but only for specific $V(s)$. This is because, not every state has the same importance in practice!
+
+\rmkb{
+In Policy Gradient, we do not parametrize the Value function! Instead we only parametrize the policy. Fix a subclass $\Pi^\Theta \subseteq \Pi_S$ of parametrized stationary policies $\pi^\theta$ that hopefully contains the optimal policy. The goal is then to maximize for an initial distribution $\mu$ on $\mathcal{S}$ the mapping
+$$
+\theta \mapsto J_\mu (\theta) := V^{\pi^\theta} (\mu) := \sum_{s \in \mathcal{S}} \mu (s) V^{\pi^\theta} (s),
+$$
+where $V^{\pi^\theta} (s) = \mathbb{E}_s^{\pi^\theta}[ \sum_{t=1}^T R_t  ],$ for $T \sim Geo(1-\gamma)$ or fixed (we look at both infinite and finite MDPs), using numerical methods. We will denote the best policy $\pi^{\theta^*} \approx \pi^*$. Due to the fact that
+$$
+\nabla J_\mu = \sum_{s \in \mathcal{S}} \mu (s) \nabla J_s
+$$
+we will only look at the formulas for $J(\theta) := V^{\pi^\theta} (s)$.
+}
+We now want to answer the following questions
+\begin{itemize}
+    \item How to set up an algorithm and how to compute the gradient?
+    \begin{itemize}
+        \item [->] Gradient estimates can be obtained in a model free way (Policy gradient theorems)
+    \end{itemize}
+    \item How to choose $\Pi^\Theta$ such that $\pi^* \in \Pi^\Theta$?
+    \begin{itemize}
+        \item [->] Trade off of choosing large and small families. Not much is known in practical applications, i.e. Neural Networks and hope.
+    \end{itemize}
+    \item How to initialize?
+\end{itemize}
+
+\defn{}{
+Let $\Theta \subset \mathbb{R}^d$ and $\{\pi^\theta \mid \theta \in \Theta\}$ a set of stationary policies such that $\theta \mapsto \pi^\theta (a;s)$ is differentiable in $\theta$ for every $s \in \mathcal{S}$ and $a \in \mathcal{A}.$  Then we call this mapping a differentiable parametrised family of stationary policies.
+}
+Later we will discuss policies that are neural networks which have to be large enough to hopefully contain the optimal policiy, but at the same time small enough to be numerically feasible.
+
+\rmkb{
+If $\Theta = \mathbb{R}^d$ then we have to choose $d < |\mathcal{A}||\mathcal{S}|$ in order to keep $\Theta$ from exploding in size.
+}
+\ex{
+Suppose $d = |\mathcal{S}| |\mathcal{A}|$ such that every state action pair has its own coordinate. Denote by $\theta = (\theta_{s,a})_{s \in \mathcal{S},a \in \mathcal{A}}$ the parameters for the parametrized family. Direct parametrization is given by
+
+$$
+\pi^\theta (a;s) := \theta_{s,a}, \quad \sum_{a} \theta_{s,a} =1, \theta_{s,a}\geq 0.
+$$
+or define the softmax parametrization
+$$
+\pi^\theta (a;s) = \frac{e^{\theta_{s,a}}}{\sum_{a^\prime \in \mathcal{A}_s} e^{\theta_{s,a^\prime}} }.
+$$
+The problem with these two parametrization is that they are to large and contain to much policies. Instead of the tabular parameterization as above, we can also define the generalized softmax policy by any differentiable function $\theta \mapsto h_\theta (s,a)$ such that
+$$
+\pi^\theta (a;s) = \frac{e^{ h_\theta (s,a)}}{\sum_{a^\prime \in \mathcal{A}_s} e^{ h_\theta (s,a^\prime)} }.
+$$
+If for instance $h_\theta (s,a) := \theta^T \Phi (s,a)$ then we call it linear softmax with features $\Phi (s,a)$. If $\Phi(s,a) = \theta_{s,a} \textbf{1}_{s,a}$, i.e. the unit vector, we have the tabular softmax. If $\Phi (s,a)$ builds a different kind of basis for $\mathbb{R}^d$ it is no longer a tabular policy. The feature vector is supposed to reduce complexity, thus $\Phi (s,a)$ should build a basis of a space that is small enough to be computationally feasible but at the same time large enough to separate state action pairs sufficiently.\\
+An example of a generalized softmax policy is, when we take a neural network where in the last layer we have a softmax activation function. Usually the number of weights is lower than $d=|\mathcal{A}|\cdot |\mathcal{S}|$.???
+}
+
+In the following we make sense of the following gradient ascent algorithm assuming we can calculate $V^{\pi^\theta} (s)$ explicitly.
+\begin{algorithm}[H]
+\caption{Plain vanilla policy gradient algorithm (exact gradients)}
+\SetKwInOut{Data}{Data}
+\SetKwInOut{Result}{Result}
+
+\Data{Initial parameter $\theta_0$}
+\Result{Approximate policy $\pi^{\theta}\approx\pi^{\theta^\ast}$}
+
+Set $n = 0$;\\
+\While{not converged}{
+    Choose step‐size $\alpha$;\\
+    Compute $K = \nabla J(\theta)\bigl|_{\theta=\theta_n}$;\\
+    Update $\theta_{n+1} = \theta_n - \alpha K$;\\
+    $n \gets n + 1$;\\
+}
+\Return{$\pi^{\theta_n}$}
+\end{algorithm}
+There are a lot of problems:
+\begin{itemize}
+    \item There is no reason to assume that $\theta \mapsto J(\theta)$ satisfies typical concavity conditions. Therefore it is very likely that we get stuck in a local stationary point.
+    \item The gradient $\nabla J (\theta)$ is typically unknown. How could one impliment this method without access to the gradient?
+    \item This method is really slow! How can we speed up the algorithm?
+\end{itemize}
+The first two problems can be partially resolved.\\
+We will first focus on classical results for gradient ascent. We will show that the right set up for this method is the PL inequality and L-smoothness.\\
+Next we we discuss how we can combine the policy gradient theorems with neural netweork parametrisations.\\
+Finally, we will consider some modifiactions that are used in practice.
+
+\section{Policy gradient theorems}
+Our first result will be that we can express the gradient in a rather nice way such that we can approximate it in a model free way as an expectation, that does not involve the transition probabilities and thus can be approximated by samples only!\\
+For didactic reasons we first only deal with finite MDPs. Here the situation is not extremely realistic, because most finite-time MDPs do not have optimal strategies that are stationary (rember the last time step in the ice vendor example). But this is good starting point for the later discussed infinite time MDPs.
+
+\subsection{Finite-time MDPs}
+Here we assume that there is no reward in the last step, i.e.
+$$
+J(\theta) = \mathbb{E}_\mu^{\pi^\theta} [\sum_{t=0}^{T-1} R_t].
+$$
+In this didactic section we will derive three firrerent expressions for the gradient. In the following we write
+$$
+R_t^T := \sum_{k=t}^{T-1} R_{k+1}
+$$
+for the reward after time t up to time $T$ which we call the reward to go. We call $R_0^T$ the total non-discounted reward.\\
+Remember that in bandits the gradient was of the form
+$$
+\mathbb{E}[\nabla_\theta \log (\pi^\theta (A)) X_A].
+$$
+\thm{}{
+Assume that $(S,A,R)$ is a $T$-step MDP with finite state action spaces and consider a stationary differentiable parameterized family of policies $\{\pi^\theta \mid \theta \in \Theta \}$. Then it holds that the gradient of the value function exists wrt. $\theta$ and is given by
+$$
+\nabla_\theta J_s (\theta) = \mathbb{E}_s^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (A_t;S_t) ) R_0^T) ].
+$$
+}
+Note that in the proof we used that
+$$
+\mathbb{E}[Y] = \begin{pmatrix}
+    \mathbb{E}[Y_1]\\
+    \cdots\\
+    \mathbb{E}[Y_n]
+\end{pmatrix}
+,\quad Y \in \mathbb{R}^n.
+$$
+\pf{
+Consider a trajectory $\tau = (s_0,a_0,r_0,...,r_{T-1},s_{T-1},r_{T-1},s_T,r_T)$ of the $T-$step MDP and its path probability without $a_T$ as
+\begin{align*}
+\mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau) &= \delta_s (s_0) \pi^\theta (a_0;s_0) \prod_{t=0}^{T-2} p(s_{i+1},r_i;s_i,a_i) \pi^\theta (a_{i+1};s_{i+1}) \\
+&\cdot p(s_{T},r_{T-1};s_{T-1},a_{T-1}) \pi^\theta (\mathcal{A}_{S_T};s_{T}) \cdot  p(\mathcal{S} \times \{r_T\};s_T,\mathcal{A}_{s_T}) 
+\end{align*}
+and define the set of all trajectories for $T$ steps as
+$$
+\mathcal{T} := \{ \tau = (s_0,a_0,r_0,...,s_{T-1},a_{T-1},r_{T-1},s_T,r_T) \mid \forall t \leq T: r_t \in \mathcal{R}, s_t \in \mathcal{S} \text{ and } \forall t < T:  a_t \in \mathcal{A}_{s_t} \}.
+$$
+Thus we can write
+$$
+J_s (\theta) = V^{\pi^\theta} (s) = \mathbb{E}_s^{\pi^\theta} [\sum_{t=0}^{T-1} R_{t+1}] = \sum_{\tau \in \mathcal{T} } \mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau) \sum_{t=0}^{T-1} r_{t+1}
+$$
+Because the probability over every trajectory is differentiable and we have a finite sum, this proves the differentiability.\\
+Next using the log trick, we have that
+\begin{align*}
+    & \nabla_\theta \mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau) \\
+    &= \nabla_\theta \mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau) \frac{\mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau)}{\mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau)} \\
+    &= \nabla_\theta \log (\mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau)) \mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau) \\
+    &= \nabla_\theta \left( \log(\delta_s (s_0)+ \log(\pi (a_0;s_0) + \sum_{t=0}^{T-1} (\log (p(s_{i+1},r_i;s_i,a_i) )+\log(\pi^\theta (a_{i+1};s_{i+1}))   )+ \log(p(s_{T},r_{T-1};s_{T-1},a_{T-1}))+ \log( p(\mathcal{S} \times \{r_T\};s_T,\mathcal{A}_{s_T}) ) \right)  \\
+    & \cdot \mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau) \\
+    &= \sum_{t=0}^{T-1} \nabla_\theta ( \log (\pi^\theta (a_t,s_t )) \cdot \mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau)
+\end{align*}
+Due to the log, the only summand that depemds on $\theta$ is the policy $\pi^\theta$, thus all other summands dissapear. Due to the fact that the state, action and reward space are finite we can interchange the derivative with the sum:
+\begin{align*}
+    \nabla_\theta J_s (\theta) &= \nabla_\theta V^{\pi^\theta} (s)\\
+    &= \sum_{\tau \in \mathcal{T}} \nabla_\theta \mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau) \sum_{t=0}^{T-1} r_{t+1} \\
+    &= \sum_{\tau \in \mathcal{T}} \left(\sum_{t=0}^{T-1} \nabla_\theta ( \log (\pi^\theta (a_t,s_t )) \cdot \mathbb{P}_s^{\pi^\theta} ((S,A,R)=\tau) \right) \sum_{t=0}^{T-1} r_{t+1} \\
+    &= \mathbb{E}_s^{\pi^\theta} [  (\sum_{t=0}^{T-1} \nabla_\theta  \log (\pi^\theta (A_t,S_t )) \sum_{t=0}^{T-1} R_{t+1}] \\
+    &= \mathbb{E}_s^{\pi^\theta} [  (\sum_{t=0}^{T-1} \nabla_\theta  \log (\pi^\theta (A_t,S_t )) R_0^T]
+\end{align*}
+}
+Note that in this proof, the log trick made sure that we got an expectation again.\\
+Problem: This estimator has a high variance (not only problem with length of the gradient but also the direction).
+Note that for every $s \in \mathcal{S}$ that $\nabla_\theta J_s (\theta)$ is a vector.
+
+\defn{Score function}{
+If $\pi$ is a policy, then we define the vector $\nabla_\theta (\log(\pi^\theta (a;s) ) )$ as the score function of $\pi^\theta.$ 
+}
+
+Similar as in the bandit chapter we can show the following
+\ex{
+Show that for the tabular softmax parametrization that
+$$
+\frac{\partial \log (\pi^\theta (a;s))}{\partial \theta_{s^\prime,a^\prime}} = \textbf{1}_{s=s^\prime} \cdot (\textbf{1}_{a=a^\prime} - \pi ^\theta (a^\prime;s^\prime))
+$$
+and for the linear softmax parametrization with features $\Phi (s,a)$ it holds that
+$$
+\nabla_\theta \log (\pi^\theta (a;s)) = \Phi (s,a) - \sum_{a^\prime \in \mathcal{A}_{s}} \pi^\theta (a^\prime ;s) \Phi(s,a^\prime).
+$$
+}
+In our theorem above, we have that the we multiply by the constant $R_0^T := \sum_{t=0}^{T-1} R_t$. In the next theorem we can show that we can we can rewirte the constant in a time depended manner.
+\thm{}{
+Assume that $(S,A,R)$ is a $T$-step MDP with finite state action spaces and consider a stationary differentiable parameterized family of policies $\{\pi^\theta \mid \theta \in \Theta \}$. Then it holds that the gradient of the value function exists wrt. $\theta$ and is given by
+$$
+\nabla_\theta J_s (\theta) = \mathbb{E}_s^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (A_t;S_t) ) R_t^T) ].
+$$
+}
+\pf{
+From the Last theorem we have that
+$$
+\nabla_\theta J_s (\theta) = \mathbb{E}_s^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (A_t;S_t) ) R_0^T) ] = \sum_{t^\prime=0}^{T-1} \sum_{t^*=0}^{T-1}  \mathbb{E}_s^{\pi\theta} [ \nabla_\theta (\log (\pi^\theta (A_{t^\prime};S_{t^\prime}) ) R_{t^*}) ]
+$$
+We can now show that all summands with $t^*<t^\prime$ fall away, i.e.
+\begin{align*}
+    &\mathbb{E}_s^{\pi\theta} [ \nabla_\theta (\log (\pi^\theta (A_{t^\prime};S_{t^\prime}) ) R_{t^*}) ] \\
+    &= \sum_{\tau \in \mathcal{T}} \mathbb{P}_s^\pi ((S,A,R)=\tau)  \nabla_\theta (\log (\pi^\theta (a_{t^\prime};s_{t^\prime}) ) r_{t^*} \\
+    &= \sum_{a_0} \sum_{s_1} \sum_{r_1} \cdots \sum_{s_T} \sum_{a_T} \sum_{r_T} \delta_s (s_0) \pi^\theta (a_0;s_0) \prod_{t=0}^{T-2} p(s_{i+1},r_i;s_i,a_i) \pi^\theta (a_{i+1};s_{i+1}) \\
+&\cdot p(s_{T},r_{T-1};s_{T-1},a_{T-1}) \pi^\theta (\mathcal{A}_{S_T};s_{T}) \cdot  p(\mathcal{S} \times \{r_T\};s_T,\mathcal{A}_{s_T})   \nabla_\theta (\log (\pi^\theta (a_{t^\prime};s_{t^\prime}) ) r_{t^*} \\
+&= \sum_{a_0} \sum_{s_1} \sum_{r_1} \cdots \sum_{s_{T-1}} \sum_{a_{T-1}} \sum_{r_{T-1}} \delta_s (s_0) \pi^\theta (a_0;s_0) \prod_{t=0}^{T-2} p(s_{i+1},r_i;s_i,a_i) \pi^\theta (a_{i+1};s_{i+1}) \\
+&\cdot   \nabla_\theta (\log (\pi^\theta (a_{t^\prime};s_{t^\prime}) ) r_{t^*} \\
+&\cdots\\
+&= \sum_{a_0} \sum_{s_1} \sum_{r_1} \cdots \sum_{s_{t^\prime-1}} \sum_{a_{t^\prime-1}} \sum_{r_{t^\prime-1}} \delta_s (s_0) \pi^\theta (a_0;s_0) \prod_{t=0}^{t^\prime-2} p(s_{i+1},r_i;s_i,a_i) \pi^\theta (a_{i+1};s_{i+1}) \\
+&\cdot  \sum_{a_{t^\prime}} \underbrace{\sum_{s_{t^\prime}} \sum_{r_{t^\prime}} p(s_{t^\prime},r_{t^\prime};s_{t^\prime-1},a_{t^\prime-1})}_{=1} \underbrace{\pi^\theta (a_{t^\prime};s_{t^\prime})  \nabla_\theta (\log (\pi^\theta (a_{t^\prime};s_{t^\prime}) )}_{=\nabla_\theta \pi^\theta (a_{t^\prime};s_{t^\prime})} r_{t^*} \\
+&= \sum_{a_0} \sum_{s_1} \sum_{r_1} \cdots \sum_{s_{t^\prime-1}} \sum_{a_{t^\prime-1}} \sum_{r_{t^\prime-1}} \delta_s (s_0) \pi^\theta (a_0;s_0) \prod_{t=0}^{t^\prime-2} p(s_{i+1},r_i;s_i,a_i) \pi^\theta (a_{i+1};s_{i+1}) \\
+&\cdot \underbrace{\nabla_\theta  \sum_{a_{t^\prime}} \pi^\theta(a_{t^\prime};s_{t^\prime})}_{=\nabla_\theta 1=0}\\
+&=0
+\end{align*}
+Thus the assertion follows.
+}
+This has a lower variance as the one with $R_0^T$, because a lot of terms that are in expectation zero are gone.\\
+Finally, we can also show that we can replace the reward to go by the $Q$-function to go, i.e.
+$$
+Q_t^{\pi^\theta} (s,a) :=\mathbb{E}^{\pi^\theta}[\sum_{i=t}^T R_i \mid S_t=s ,A_t=a]= \mathbb{E}^{\pi^\theta}[R_t^T \mid S_t=s ,A_t=a] \stackrel{Markov}{=} \mathbb{E}_{s^\prime}^{\pi^\theta}[R_t^T \mid S_t=s ,A_t=a] 
+$$
+\thm{}{
+Assume that $(S,A,R)$ is a $T$-step MDP with finite state action spaces and consider a stationary differentiable parameterized family of policies $\{\pi^\theta \mid \theta \in \Theta \}$. Then it holds that the gradient of the value function exists wrt. $\theta$ and is given by
+$$
+\nabla_\theta J_s (\theta) = \mathbb{E}_s^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (A_t;S_t) ) Q^{\pi^\theta}_t (S_t,A_t) ].
+$$
+}
+\pf{
+We have that
+\begin{align*}
+    \nabla_\theta J_{s^\prime} (\theta) &= \mathbb{E}_{s^\prime}^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (A_t;S_t) ) R_t^T ] \\
+    &=\sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}_s} \mathbb{E}_{s^\prime}^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (A_t;S_t) ) R_t^T \mid S_t=s,A_t=a] \mathbb{P}_{s^\prime}^{\pi^\theta} ( S_t=s,A_t=a) \\
+    &=\sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}_s} \mathbb{E}_{s^\prime}^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (a;s) ) R_t^T \mid S_t=s,A_t=a] \mathbb{P}_{s^\prime}^{\pi^\theta} ( S_t=s,A_t=a) \\
+    &= \sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}_s} \sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (a;s) ) \mathbb{E}_{s^\prime}^{\pi\theta} [ R_t^T \mid S_t=s,A_t=a] \mathbb{P}_{s^\prime}^{\pi^\theta} ( S_t=s,A_t=a) \\
+    &= \sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}_s} \sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (a;s) ) Q_t^{\pi^\theta} (s,a) \mathbb{P}_{s^\prime}^{\pi^\theta} ( S_t=s,A_t=a) \\
+    &= \mathbb{E}_s^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (A_t;S_t) ) Q^{\pi^\theta}_t (S_t,A_t) ].
+\end{align*}
+}
+This has the lowest variance of all. \\
+Note that here we parametrize not only the policy, but also $Q_t^{\pi^\theta}$. One can interpret Policy gradient as a continuous version of Policy iteration. We first evaluate the policy, by calculating $Q_t^{\pi^\theta}$ and then the gradient step is the improvement. In Policy Iteration we only considered deterministic stationary policies and here we only consider arbitrary stationary polices.\\
+The Q-value to go is the expected reward to go, i.e. we have an inner and an outer expectation. The rewards to go depend on the outer expectation, but for the Q-Value to go, it only depends its own inner expectation. For now it seems mysterious why the representation of the Q-Value might be beneficial. This will be answered later in ???\\
+Finally, note that $R_t^T$ is one sample from $Q^{\pi^{\theta_k}}_t(A_t,S_t)$.
+\defn{}{
+In general, methods where we try to maximize $f$ numerically and where the derivative of $f$ takes the form of an expectation that can be sampled are called stochastic gradient methods, where the gradient is usually of the form
+$$
+\nabla f(\theta) = \mathbb{E}[g(X,\theta)].
+$$
+If unbiased samples of the gradient $\tilde{\nabla}f$ are available, then the scheme
+$$
+\theta_{n+1} \leftarrow \theta_n+ \alpha \tilde{\nabla} f(\theta_n)
+$$
+is called stochastic gradient algorithm.
+}
+If multiple samples are used for one estimate of the gradient, we call this batch stochastic gradient ascent algorithm. In Policy gradient methods the situation is more deleicate, because
+$$
+\nabla f(\theta) = \mathbb{E}^\theta [g(X,\theta)].
+$$
+Thus we get the following two stochastic gradient algorithms:
+$$
+\theta_{n+1} = \theta_n + \alpha \mathbb{E}_s^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (A_t;S_t) ) Q^{\pi^\theta}_t (S_t,A_t) ]
+$$
+and
+$$
+\theta_{n+1} = \theta_n + \alpha \mathbb{E}_s^{\pi\theta} [\sum_{t=0}^{T-1} \nabla_\theta (\log (\pi^\theta (A_t;S_t) ) \sum_{i=t}^{T-1} R_i) ].
+$$
+Again, the first method is for now unfeasable. The second one could be obtained by taking Monte-Carlo Samples. An estimator for the gradient is the given by
+$$
+\tilde{\nabla} J_\mu (\theta) = \frac{1}{K} \sum_{i=1}^K \left( \sum_{t=0}^{T-1} \nabla_\theta \log(\pi^\theta (a_t^{i};s_t^{i})) \sum_{t^\prime =t}^{T-1} r_{t^\prime}^{i} \right),
+$$
+where we sample the trajectories $(s_0^{i},a_0^{i},r_0^{i},...,s_{T}^{i},a_{T}^{i},r_{T}^{i})$ K times according to the current policy $\pi^{\theta_n}$ and the initial distribution $\mu$.\\
+In Mathematics this does not sound bad, to sample a trajectory. This is because, if we play a policy $K$ times then this could be harmful, to the agent or its environment, if the underlying policy is bad. Thus we want to take as few samples as possible and play bad policies not for long!
+
+
+
+\begin{algorithm}[H]
+\caption{REINFORCE: (Batch-)Stochastic policy–gradient algorithm}
+\SetKwInOut{Data}{Data}
+\SetKwInOut{Result}{Result}
+
+\Data{Initial parameter $\theta_0$, batch size $K\ge 1$, initial state distribution $\mu$}
+\Result{Approximate optimal policy $\pi^{\theta_L}\approx\pi^{\theta^\ast}$}
+
+$l \gets 1$\;
+\While{not converged}{
+    \For{$i=1,\dots,K$}{
+        Sample initial state $s^{i}_{0}\sim\mu$\;
+        Sample trajectory $\bigl(s^{i}_{0},a^{i}_{0},s^{i}_{1},r^{i}_{1},\dots,
+        a^{i}_{T-1},s^{i}_{T},r^{i}_{T}\bigr)$ using $\pi^{\theta_{l-1}}$\;
+    }
+    Choose step size $\alpha$\;
+    $\displaystyle
+      \tilde\nabla J(\theta_{l-1})
+        =\frac1K\sum_{i=1}^{K}
+          \Bigl[
+            \sum_{t=0}^{T-1}
+              \nabla_{\!\theta}\!\log\pi^{\theta_{l-1}}\!\bigl(a^{i}_{t}\mid s^{i}_{t}\bigr)
+              \sum_{t'=t}^{T-1} r^{i}_{t'+1}
+          \Bigr]$\;
+    $\theta_{l}\gets\theta_{l-1}-\alpha\,\tilde\nabla J(\theta_{l-1})$\;
+    $l\gets l+1$\;
+}
+\Return{$\pi^{\theta_{l}}$}
+\end{algorithm}
+
+Note that we need to sample from $\pi^{\theta_k}$ because the expectation depends on this policy, i.e. $\mathbb{E}^{\pi^{\theta}}$. Later in importance sampling methods we will use a different policy $\pi^\prime$, but in order to use a different policy we need the expectation also to be depended on that policy, i.e. $\mathbb{E}^{\pi^\prime}$.\\
+\textbf{Why is this Reinforcement Learning?}\\
+Get rollouts by playing the current policy $\pi^{\theta_k}$. This gives rewards. Then update according to these rewards the $\theta_k$ in a gradient ascent scheme. As long as the gradient of the value function is sufficiently approximated, we get an improvement. Here lies the dilemma: We want to do as many gradient steps as computationally possible, but also need to create as many rollouts as possible in order to sufficiently approximate the gradient. If we approximate the gradient with a lot of samples, this might be so costly that we cannot do as many gradient steps! Thus the number of Rollouts for the approximation of the gradient should be chosen according to the noisyness of the environment/Value function (Not done here).\\
+Note that the standard REINFORCE algorithm as above performance really bad!
+
+\subsection{Infinite-Time MDPs with discounted rewards}
+For infinite time MDPs thast are discounted the stationarity is justified. But this infinite sum is going to make everything a lot more difficult! Now the value function is
+$$
+J_s(\theta) := \mathbb{E}_{s}^{\pi^\theta}[\sum_{t=0}^\infty \gamma^t R_t] = \sum_{a \in \mathcal{A}_s} \pi^\theta (a;s) Q^{\pi^\theta} (a,s).
+$$
+Our first result is the following
+\thm{}{
+For a value function $J_s$ that is differentiable in every state $s \in \mathcal{S}$ we have 
+$$
+\nabla J_s (\theta) = \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} \rho_s^\pi (s^\prime)\nabla \pi^{\theta}(a;s^\prime) Q^{\pi^\theta} (s^\prime,a),
+$$
+where $\rho_\mu^\pi (s):= \sum_{t=0}^\infty \gamma^t \mathbb{P}_\mu^\pi (S_t =s) = \mathbb{E}_\mu^\pi [\sum_{t=0}^\infty \gamma^t \textbf{1}_{S_t =s}]$.
+}
+\pf{
+The idea of the proof is: Chain Rule and Dynamic programming Bellman equation. Remeber that in dynamic programming we had that the value of the policy equals: play one step + $\gamma \cdot$ restart the problem.\\
+We first define 
+$$
+p(s\to s^\prime;n) := \mathbb{P}^{\pi}_s (S_t =s^\prime)
+$$
+which denotes the probability of transitioning from $s$ to $s^\prime$ in $n$ steps under the policy $\pi$. We want to show via induction that for all $n\in \mathbb{N}$
+\begin{align*}
+    \nabla J_s (\theta) &= \sum_{t=0}^n \sum_{s^\prime \in \mathcal{S}} \gamma^t p(s \to s^\prime;t) \sum_{a \in \mathcal{A}_{s^\prime}} \nabla( \pi^{\theta}(a;s^\prime)) Q^{\pi^\theta} (s^\prime,a) \\
+    &+ \sum_{s^\prime \in \mathcal{S}} \gamma^{n+1} p(s \to s^\prime;n+1) \nabla J_{s^\prime} (\theta).
+\end{align*}
+IA:
+\begin{align*}
+    \nabla J_s (\theta) &= \nabla \sum_{a \in \mathcal{A}} \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) \\
+    &=  \sum_{a \in \mathcal{A}} \left( \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \pi^{\theta} (a;s) \nabla Q^{\pi^\theta} (s,a) \right) \\
+    &=  \sum_{a \in \mathcal{A}} \left( \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \pi^{\theta} (a;s) \nabla \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} p(s^\prime;s,a) \pi^\theta (a^\prime;s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime) \right)\right) \\
+    &=  \sum_{a \in \mathcal{A}} \left( \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \pi^{\theta} (a;s) \nabla \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a)  V^{\pi^\theta}(s^\prime)  \right) \\
+    &=  \sum_{a \in \mathcal{A}} \left( \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \pi^{\theta} (a;s)  \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a) \nabla \left( \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi^\theta (a^\prime,s^\prime)\left( r(s^\prime,a^\prime) +\gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) V^{\pi^\theta} (s^{\prime \prime}) \right)  \right) \right)
+\end{align*}
+We can rewrite this one term inside the above as
+\begin{align*}
+  &  \nabla \left( \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi^\theta (a^\prime,s^\prime)\left( r(s^\prime,a^\prime) +\gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) V^{\pi^\theta} (s^{\prime \prime}) \right)  \right)  \\
+  &\stackrel{prod Rule}{=}   \sum_{a^\prime \in \mathcal{A}_{s^\prime}}\nabla\pi^\theta (a^\prime,s^\prime)\left( r(s^\prime,a^\prime) +\gamma \sum_{s^{\prime \prime} \in \mathcal{S}} \underbrace{p(s^{\prime \prime};s^\prime,a^\prime) V^{\pi^\theta} (s^{\prime \prime})}_{=p(s^{\prime \prime};s^\prime,a^\prime)  \sum_{a^{\prime \prime} \in \mathcal{A}_{s^{\prime \prime}}} \pi^\theta(a^{\prime \prime};s^{\prime \prime}) Q^{\pi^\theta}(s^{\prime \prime},a^{\prime \prime}) } \right) \\
+  &+ \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi^\theta (a^\prime,s^\prime) \nabla\left( r(s^\prime,a^\prime) +\gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) V^{\pi^\theta} (s^{\prime \prime}) \right)     \\ 
+  &= \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \left( \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime) +\pi^\theta (a^\prime,s^\prime) \gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) \nabla V^{\pi^\theta} (s^{\prime \prime}) \right)   \\ 
+\end{align*}
+Plugging this in into the main calulation yields
+\begin{align*}
+    &  \sum_{a \in \mathcal{A}} \left( \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \pi^{\theta} (a;s)  \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a) \nabla \left( \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi^\theta (a^\prime,s^\prime)\left( r(s^\prime,a^\prime) +\gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) V^{\pi^\theta} (s^{\prime \prime}) \right)  \right) \right)\\
+     &=  \sum_{a \in \mathcal{A}} \left( \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \pi^{\theta} (a;s)  \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a) \left(  \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \left( \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime) +\pi^\theta (a^\prime,s^\prime) \gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) \nabla V^{\pi^\theta} (s^{\prime \prime}) \right) \right) \right) \\
+     &=  \sum_{a \in \mathcal{A}} \left( \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \pi^{\theta} (a;s)  \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a)  \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime)   +\pi^{\theta} (a;s)  \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a) \sum_{a^\prime \in \mathcal{A}_{s^\prime}}  \pi^\theta (a^\prime,s^\prime) \gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) \nabla V^{\pi^\theta} (s^{\prime \prime}) \right)  \\
+     &=  \sum_{a \in \mathcal{A}} \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \sum_{a \in \mathcal{A}} \pi^{\theta} (a;s)  \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a)  \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime)   +\sum_{s^{\prime \prime} \in \mathcal{S}} \gamma^2 \sum_{a \in \mathcal{A}}  \pi^{\theta} (a;s)  \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a) \sum_{a^\prime \in \mathcal{A}_{s^\prime}}  \pi^\theta (a^\prime,s^\prime)  p(s^{\prime \prime};s^\prime,a^\prime) \nabla V^{\pi^\theta} (s^{\prime \prime})  \\
+     &=  \sum_{a \in \mathcal{A}} \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \sum_{a \in \mathcal{A}} \pi^{\theta} (a;s)  \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a)  \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime)   +\sum_{s^{\prime \prime} \in \mathcal{S}} \gamma^2 \sum_{a \in \mathcal{A}}    \sum_{s^\prime \in \mathcal{S}} \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \underbrace{\pi^{\theta} (a;s) p(s^\prime;s,a)   \pi^\theta (a^\prime,s^\prime)  p(s^{\prime \prime};s^\prime,a^\prime)}_{\mathbb{P}(A_0 =a,S_1 =s^\prime,A_1 =a^\prime,S_2 =s^{\prime \prime})} \nabla V^{\pi^\theta} (s^{\prime \prime})  \\
+     &=  \sum_{a \in \mathcal{A}} \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \sum_{a \in \mathcal{A}} \pi^{\theta} (a;s)  \gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a)  \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime)   +\sum_{s^{\prime \prime} \in \mathcal{S}} \gamma^2 p(s \to s^{\prime \prime},2) \nabla V^{\pi^\theta} (s^{\prime \prime})  \\
+     &=  \sum_{a \in \mathcal{A}} \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \sum_{s^\prime \in \mathcal{S}} \gamma \underbrace{\sum_{a \in \mathcal{A}}  \pi^{\theta} (a;s)     p(s^\prime;s,a)}_{= p(s\to s^\prime,1) }  \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime)   +\sum_{s^{\prime \prime} \in \mathcal{S}} \gamma^2 p(s \to s^{\prime \prime},2) \nabla V^{\pi^\theta} (s^{\prime \prime})  \\
+     &=  \sum_{a \in \mathcal{A}} \nabla \pi^{\theta} (a;s) Q^{\pi^\theta} (s,a) + \sum_{s^\prime \in \mathcal{S}} \gamma  p(s\to s^\prime,1)   \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime)   +\sum_{s^{\prime \prime} \in \mathcal{S}} \gamma^2 p(s \to s^{\prime \prime},2) \nabla V^{\pi^\theta} (s^{\prime \prime})  \\
+     &=\left( \underbrace{1}_{= \sum_{s^\prime \in \mathcal{S}} \gamma^0 \mathbb{P}(S_0=s,S_0=s^\prime)}+ \sum_{s^\prime \in \mathcal{S}} \gamma  p(s\to s^\prime,1)   \right)  \sum_{a \in \mathcal{A}_{s^\prime}} \nabla \pi^{\theta} (a;s^\prime) Q^{\pi^\theta} (s^\prime,a)  +\sum_{s^{\prime \prime} \in \mathcal{S}} \gamma^2 p(s \to s^{\prime \prime},2) \nabla V^{\pi^\theta} (s^{\prime \prime})  \\
+     &=\sum_{t=0}^1 \sum_{s^\prime \in \mathcal{S}} \gamma^t  p(s\to s^\prime,t)   \sum_{a \in \mathcal{A}_{s^\prime}} \nabla \pi^{\theta} (a;s^\prime) Q^{\pi^\theta} (s^\prime,a)  +\sum_{s^{\prime \prime} \in \mathcal{S}} \gamma^2 p(s \to s^{\prime \prime},2) \nabla V^{\pi^\theta} (s^{\prime \prime})  \\
+\end{align*}
+IS: Assume that the statement holds for every $n \in \mathbb{N}$
+\begin{align*}
+    \nabla J_s (\theta) & \stackrel{IV}{=}  \sum_{t=0}^n \sum_{s^\prime \in \mathcal{S}} \gamma^t p(s \to s^\prime;t) \sum_{a \in \mathcal{A}_{s^\prime}} \nabla( \pi^{\theta}(a;s^\prime)) Q^{\pi^\theta} \\
+    &+ \sum_{s^\prime \in \mathcal{S}} \gamma^{n+1} p(s \to s^\prime;n+1) \nabla J_{s^\prime} (\theta) \\
+    &=  \sum_{t=0}^n \sum_{s^\prime \in \mathcal{S}} \gamma^t p(s \to s^\prime;t) \sum_{a \in \mathcal{A}_{s^\prime}} \nabla( \pi^{\theta}(a;s^\prime)) Q^{\pi^\theta} \\
+    &+ \sum_{s^\prime \in \mathcal{S}} \gamma^{n+1} p(s \to s^\prime;n+1)  \\
+    & \cdot \nabla\left( \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi^\theta (a^\prime;s^\prime) r(s^\prime,a^\prime) + \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \gamma \sum_{s^{\prime\prime} \in \mathcal{S}} p(s^{\prime\prime};a^\prime,s^\prime) J_{s^{\prime\prime}} (\theta) \right)\\
+    &\stackrel{above}{=}  \sum_{t=0}^n \sum_{s^\prime \in \mathcal{S}} \gamma^t p(s \to s^\prime;t) \sum_{a \in \mathcal{A}_{s^\prime}} \nabla( \pi^{\theta}(a;s^\prime)) Q^{\pi^\theta} \\
+    &+ \sum_{s^\prime \in \mathcal{S}} \gamma^{n+1} p(s \to s^\prime;n+1)  \\
+    & \cdot \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \left( \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime) +\pi^\theta (a^\prime,s^\prime) \gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) \nabla V^{\pi^\theta} (s^{\prime \prime}) \right)
+\end{align*}
+Now looking only at the second summand yields
+\begin{align*}
+    &\sum_{s^\prime \in \mathcal{S}} \gamma^{n+1} p(s \to s^\prime;n+1)  \\
+    & \cdot \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \left( \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime) +\pi^\theta (a^\prime,s^\prime) \gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) \nabla V^{\pi^\theta} (s^{\prime \prime}) \right) \\
+    &= \sum_{s^\prime \in \mathcal{S}} \gamma^{n+1} p(s \to s^\prime;n+1)  \sum_{a^\prime \in \mathcal{A}_{s^\prime}}  \nabla\pi^\theta (a^\prime,s^\prime) Q^{\pi^\theta}(s^\prime,a^\prime) \\
+    &+\sum_{s^\prime \in \mathcal{S}} \underbrace{\gamma^{n+1} p(s \to s^\prime;n+1)  \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi^\theta (a^\prime,s^\prime) \gamma \sum_{s^{\prime \prime} \in \mathcal{S}} p(s^{\prime \prime};s^\prime,a^\prime) \nabla V^{\pi^\theta} (s^{\prime \prime}) }_{\substack{=\gamma^{n+2}\sum_{a^\prime \in \mathcal{A}_{s^\prime}} \sum_{s^{\prime \prime} \in \mathcal{S}} p(s \to s^\prime;n+1)   \pi^\theta (a^\prime,s^\prime)  p(s^{\prime \prime};s^\prime,a^\prime) \nabla V^{\pi^\theta} (s^{\prime \prime}) \\
+    =\gamma^{n+2}  \sum_{s^{\prime \prime} \in \mathcal{S}} p(s \to s^{\prime\prime };n+2)  \nabla V^{\pi^\theta} (s^{\prime \prime}) } }
+\end{align*}
+and thus the assertion follows. Now note that the second summand of the formula we showed via induction goes to zero as we let $n \to \infty$, i.e.
+\begin{align*}
+    \sum_{s^\prime \in \mathcal{S}} \gamma^{n+1} p(s \to s^\prime;n+1) \nabla J_{s^\prime} (\theta) &\leq \sum_{s^\prime \in \mathcal{S}} \gamma^{n+1} p(s \to s^\prime;n+1) \max_{s^\prime}  \nabla J_{s^\prime} (\theta) \\
+    &= \gamma^{n+1} \max_{s^\prime}  \nabla J_{s^\prime} (\theta) \underbrace{\sum_{s^\prime \in \mathcal{S}}p(s \to s^\prime;n+1)}_{=1} \\
+    & \to 0, \quad n \to \infty
+\end{align*}
+Henceforth we have shown
+\begin{align*}
+    \nabla J_s (\theta) &= \sum_{t=0}^n \sum_{s^\prime \in \mathcal{S}} \gamma^t p(s \to s^\prime;t) \sum_{a \in \mathcal{A}_{s^\prime}} \nabla( \pi^{\theta}(a;s^\prime)) Q^{\pi^\theta} \\
+    &\stackrel{DCT}{=}  \sum_{s^\prime \in \mathcal{S}} \underbrace{\sum_{t=0}^n \gamma^t p(s \to s^\prime;t) }_{= \rho_s^{\pi^\theta}(s^\prime) }\sum_{a \in \mathcal{A}_{s^\prime}} \nabla( \pi^{\theta}(a;s^\prime)) Q^{\pi^\theta} 
+\end{align*}
+}
+In order to make the gradient an expectation, we will define the following
+\defn{}{
+The discounted visitation measure under the policy $\pi$ when starting with measure $\mu$ is defined for all $s$ as
+$$
+d^\pi_\mu (s) := \frac{\rho_\mu^\pi (s)}{\sum_{s^\prime \in \mathcal{S}} \rho_\mu^\pi (s^\prime)}
+$$
+which denotes the relative visitation of state $s$ compared to all other states.
+}
+This large sum in the fraction can be rewritten as follows
+\begin{align*}
+    \sum_{s \in \mathcal{S}} \rho_\mu^\pi (s) = \sum_{s \in \mathcal{S}} \mathbb{E}_\mu [\sum_{t=0}^\infty \gamma^t \textbf{1}_{S_t =s}] =\sum_{t=0}^\infty  \gamma^t \mathbb{E}_\mu [ \sum_{s \in \mathcal{S}} \textbf{1}_{S_t =s}]  = \frac{1}{1-\gamma}.
+\end{align*}
+Thus we can write it also as
+$$
+d^\pi_\mu (s) = (1-\gamma) \rho_\mu^\pi (s).
+$$
+Using this we can now write the gradient as an expectation
+\thm{}{
+Under the assumption that $J_s(\theta)$ is differentiable we can write the gradient for every starting state $s \in \mathcal{S}$ as 
+$$
+\nabla J_s (\theta) = \frac{1}{1-\gamma} \mathbb{E}_{S \sim d^\pi_s, A \sim \pi^\theta (\cdot;S)}[\nabla \log (\pi^\theta (A;S)) Q^{\pi^\theta} (S,A)].
+$$
+}
+\pf{
+This follows immediately with the lemma above
+\begin{align*}
+    \nabla J_s (\theta) &= \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} \rho_s^\pi (s^\prime)\nabla \pi^{\theta}(a;s^\prime) Q^{\pi^\theta} (s^\prime,a) \\
+    &= \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} d_s^\pi (s^\prime) \frac{1}{1-\gamma}\nabla \pi^{\theta}(a;s^\prime) Q^{\pi^\theta} (s^\prime,a) \\
+    &= \frac{1}{1-\gamma}\sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} \underbrace{d_s^\pi (s^\prime) \pi^{\theta}(a;s^\prime)}_{\text{probability weights}}\nabla(\log(\pi^\theta(a;s^\prime)))  Q^{\pi^\theta} (s^\prime,a) \\
+    &=  \frac{1}{1-\gamma} \mathbb{E}_{S \sim d^\pi_s, A \sim \pi^\theta (\cdot;S)}[\nabla \log (\pi^\theta (A;S)) Q^{\pi^\theta} (S,A)].
+\end{align*}
+}
+The problem now is that we do not know $d^\pi_s$ and we do not know $Q^{\pi^\theta}$.\\
+How to estimate the $Q$-value has already been talked about. How to estimate $d_\mu^{\pi^\theta}$ could be done in the following way. Sample one "infinite" rollout and then count the empirical visitation of every state $s \in \mathcal{S}$. Then using this construct the probability weights of this empirical measure and then take a sample from it, to use it as one sample for the expectation, i.e. $S \sim \hat{d^{\pi^\theta}_\mu}$. So we build with one rollout our empirical distribution and then sample from it.\\
+Problem: Infinite rollout is not realistic!\\
+Solution: Write the infinite sum as a sum up to a geometrically $Geo(1-\gamma)$ distributed terminating time:
+\begin{align*}
+    \rho_\mu^\pi (s) & := \mathbb{E}_\mu^\pi [\sum_{t=0}^\infty \gamma^t \textbf{1}_{S_t =s}] \\
+    & = \sum_{t=0}^\infty \gamma^t \mathbb{E}_\mu^\pi [ \textbf{1}_{S_t =s}] \\
+    &=\sum_{t=0}^\infty (1-(1-\gamma)^t \mathbb{E}_\mu^\pi [ \textbf{1}_{S_t =s}] \\
+    & \stackrel{DefGeo}{=}\sum_{t=0}^\infty \mathbb{P}(t\leq T) \mathbb{E}_\mu^\pi [ \textbf{1}_{S_t =s}] \\
+    &\stackrel{independent}{=} \sum_{t=0}^\infty \mathbb{E}_\mu^\pi [ \textbf{1}_{t\leq T} \textbf{1}_{S_t =s}] \\
+    &=  \mathbb{E}_\mu^\pi [ \sum_{t=0}^\infty\textbf{1}_{t\leq T} \textbf{1}_{S_t =s}] \\
+    &=  \mathbb{E}_\mu^\pi [ \sum_{t=0}^T  \textbf{1}_{S_t =s}] \\
+\end{align*}
+where we used that for a geometric rv $Y$ we have that
+\begin{align*}
+    \mathbb{P}(Y \geq t) &= \sum_{i=t}^\infty \gamma (1-\gamma)^{i-1} \\
+    &= \sum_{i=t}^\infty \gamma (1-\gamma)^{i-1+t-t} \\
+    &= \sum_{k=0}^\infty \gamma (1-\gamma)^{t-1} (1-\gamma)^{k}, \quad k:= i-t \\
+    &=\gamma (1-\gamma)^{t-1}\frac{1}{\gamma} =(1-\gamma)^{t-1}
+\end{align*}
+although in the sum above $t=0,...,T$ but Geometric random variables are only defined on $t\geq 1$, thus doing an index shift yields $\gamma^t$.\\
+\rmkb{
+In order to avoid the state visitation measure we can also write the gradient in the following way.
+}
+\thm{}{
+Suppose that $(s,a) \mapsto \nabla \log (\pi^\theta (a;s)) Q^{\pi^\theta} (s,a)$ is bounded, then
+$$
+\nabla J_s (\theta) = \mathbb{E}_s^{\pi^\theta}[\sum_{t=0}^\infty \gamma^t \nabla_\theta \log (\pi^\theta (A_t;S_t)) Q^{\pi^\theta} (S_t,A_t)].
+$$
+}
+\pf{
+Again using the first Theorem of this section we have that
+\begin{align*}
+    \nabla J_s (\theta) &= \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} \rho_s^\pi (s^\prime)\nabla \pi^{\theta}(a;s^\prime) Q^{\pi^\theta} (s^\prime,a) \\
+    &= \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} \sum_{t=0}^\infty \gamma^t p(s\to s^\prime,t)   \nabla \pi^{\theta}(a;s^\prime) Q^{\pi^\theta} (s^\prime,a) \\
+    &= \sum_{t=0}^\infty \sum_{s^\prime \in \mathcal{S}}  \gamma^t p(s\to s^\prime,t)    \sum_{a \in \mathcal{A}_{s^\prime}} \nabla \pi^{\theta}(a;s^\prime) Q^{\pi^\theta} (s^\prime,a) \\
+    &= \sum_{t=0}^\infty \mathbb{E}_s^{\pi^\theta} [ \sum_{a \in \mathcal{A}_{s^\prime}} \gamma^t \nabla \pi^{\theta}(a;S_t) Q^{\pi^\theta} (S_t,a)] \\
+    &= \sum_{t=0}^\infty \mathbb{E}_s^{\pi^\theta} [ \sum_{a \in \mathcal{A}_{s^\prime}} \gamma^t \nabla \log (\pi^\theta (a;S_t)) \pi^{\theta}(a;S_t) Q^{\pi^\theta} (S_t,a)] \\
+    &= \sum_{t=0}^\infty \mathbb{E}_s^{\pi^\theta} [ \gamma^t \nabla( \log (\pi^\theta (A_t;S_t)))  Q^{\pi^\theta} (S_t,A_t)].
+\end{align*}
+}
+\clm{}{
+\label{Assumptions on policy}
+We assume that the policy $\pi^\theta$ is $L-$smooth wrt. to $\theta$ and that the score function is bounded by above, i.e.
+$$
+\forall \theta \in \Theta \exists B_\theta: \quad \|\nabla \log (\pi^\theta(a;s))  \| \leq B_\theta
+$$
+}
+A dirty trick computer scientist use is to cut of the infinite sum. This is wrong. Here again we can write the infinite sum as a geometric sum, but this time with two geometric random variables.
+\thm{}{
+Suppose that the policy satisfies the assumptions \ref{Assumptions on policy} and $T\sim Geo(1-\gamma)$ and $T^\prime \sim Geo(1-\gamma^{1/2})$ two independent random variables. Then
+$$
+\nabla J_s (\theta) = \frac{1}{1-\gamma} \mathbb{E}_s^{\pi^\theta}[\nabla \log (\pi^\theta (A_T;S_T)) \sum_{t=T}^{T+T^\prime} \gamma^{(t-T)/2} R(S_t,A_t)].
+$$
+}
+Here the Q-function is replaced by one sample and the $T^\prime$ comes from the infinite sum of the Q-function. This is also why there is the term $1/2$ in the exponent, because $T^\prime \sim (1-\gamma^{1/2})$ and we can write value function as
+$$
+V^\pi (s) := \mathbb{E}_s^\pi [\sum_{t=0}^\infty R_t] = \mathbb{E}_s^\pi [\sum_{t=0}^{T^\prime} (\gamma^{1/2})^t R_t], \quad T^\prime \sim Geo(1-\gamma^{1/2}).
+$$
+\subsection{Convergence of REINFORCE}
+
+\lem{}{
+Under the assumptions \ref{Assumptions on policy} it follows that $J_{s_0} (\theta)$ is L-smooth wrt. $\theta$.
+}
+\lem{}{
+The estimator $\hat{\nabla J_s (\theta)}$ from the mini batch REINFORCE algorithm is bounded, i.e.
+$$
+\|\hat{\nabla J_s (\theta)}\| \leq C
+$$
+and has bounded variance, i.e.
+$$
+\mathbb{E}[\|\hat{\nabla J_s (\theta)}- \nabla J_s (\theta)\|^2] \leq B.
+$$
+}
+Thus under specific assumptions the REINFORCE algorithm satisfies the requirements of the SGD theorem. Note that it only converges to a $\theta^*$ with $\|\nabla J_s (\theta^*)\|^2=0$ which is not necessarily a maximum.\\
+Under strong assumptions on the Policy then $J_s (\theta)$ can satisfy the weak PL-inequality and then even converge to the maximum. This is then a SGD version where we have instead of L-smoothnes the weak PL-inequality (not gone into further detail).
+\subsection{Variance Reduction methods}
+In bandits we used a baseline $(X_A-b)$ where we can control with $b$ how far we go in the direction of the gradient. In the finite time setting we can then show that
+\thm{}{
+With a finite time $(S,A,R)$ T-step MDP with finite state and action spaces and differentiable parameterized family of policies it holds that for all $b \in \mathbb{R}$
+$$
+\nabla_\theta J_s (\theta) = \mathbb{E}_s^{\pi^\theta}[\sum_{t=0}^{T-1} \nabla_\theta \log (\pi^\theta (A_t;S_t) ) \left( \underbrace{Q_t^{\pi^\theta} (S_t,A_t)}_{\text{or $R_0^T$ or $R_t^T$}}-b \right)] 
+$$
+}
+\pf{
+We only need to show that for every $t =0,....,T-1$ it holds that
+\begin{align*}
+    \mathbb{E}_s^{\pi^\theta} [\nabla_\theta \log (\pi^\theta (A_t,S_t)) b] &=  \sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}_s} \nabla_\theta \log (\pi^\theta (a;s)) b \mathbb{P}_s^{\pi^\theta} (A_t =a,S_t=s) \\
+     &=  \sum_{s \in \mathcal{S}} \sum_{a \in \mathcal{A}_s} \nabla_\theta \log (\pi^\theta (a;s)) b \mathbb{P}_s^{\pi^\theta}(S_t =s) \pi^\theta (a;s) \\
+     &=  \sum_{s \in \mathcal{S}}b \mathbb{P}_s^{\pi^\theta}(S_t =s) \sum_{a \in \mathcal{A}_s} \nabla_\theta\pi^\theta (a;s) \frac{1}{\pi^\theta (a;s)}  \pi^\theta (a;s)\\
+     &=  \sum_{s \in \mathcal{S}}b \mathbb{P}_s^{\pi^\theta}(S_t =s) \underbrace{\nabla_\theta\sum_{a \in \mathcal{A}_s} \pi^\theta (a;s)}_{=\nabla_\theta 1 =0}  =0.
+\end{align*}
+}
+One can show that the bias $b$ can depend on everything except for $a_t$. Reasonable is of course that it only depends on the past.\\
+In the bandit chapter we had a choice for $b$ that reduces the variance. A similiar thing could be derived here. Note that this optimal bias was an expectation and thus not obtainable without errors.\\
+Another approach was to choose the bias as the current estimated reward, i.e.
+$$
+b_t := \hat{V}_t^\pi (s).
+$$
+One then calls $\hat{Q}_t^{\pi^{\theta_k}} (s,a) - \hat{V}_t^{\pi^{\theta_k}} (s)$ advantage function, i.e. the rewards are only positive if we get better rewards than the current policy if we choose action $a_t$.???
+
+\textbf{Importance Sampling:}\\
+The idea of importance sampling is that assume we want to calculate $\mathbb{E}[g(X)]$ but $g(X)$ has a high variance. Then sample from from $\tilde{g}(Y)$ with lower variance, i.e.
+$$
+\mathbb{E}[Y] = \int g(x) f_X(x) dx = \int \underbrace{g(x) \frac{f_X(x)}{f_Y (x)}}_{=\tilde{g}(x)} f_Y(x)dx = \mathbb{E}[\tilde{g}(Y)].
+$$
+So we need to find $Y$ in order to reduce the variance. In RL it is completely different. Here we cannot sample from $X$ and thus have to sample from $Y$. Of course we also want to find a $Y$ that reduces the variance. In RL we cannot sample from $\pi^\theta$ and thus have to sample from $\pi^b$.
+
+
+
+\textbf{Sparse Rewards:}\\
+In an untrained model with an environment that has sparse rewards, then in the beginning the model learns nothing, because random action rarely lead to any reward. Thus it is of great importance to use pretrained models if possible.
+
+\lem{Likelihood-Ration Trick}{
+Suppose $\pi^b$ is a policy with strict positive weights (we call it behavioral policy) then
+$$
+\nabla_\theta J_\mu (\theta) := \mathbb{E}_\mu^{\pi^b}[\prod_{i=0}^{T-1} \frac{\pi^\theta (A_i;S_i)}{\pi^b (A_i;S_i)} \sum_{t=0}^{T-1} \nabla_\theta \log (\pi^\theta (A_t;S_i)) Q_t^{\pi^\theta} (S_t,A_t) ].
+$$
+}
+\pf{
+With a Lemma from before we have that
+\begin{align*}
+    \nabla_\theta J_\mu (\theta) &= \mathbb{E}_\mu^{\pi^\theta}[\sum_{t=0}^{T-1} \nabla_\theta \log (\pi^\theta (A_t;S_t)) Q_t^{\pi^\theta} (S_t,A_t)] \\
+    &= \sum_{\tau \in \mathcal{T}} \sum_{t=0}^{T-1} \nabla_\theta \log (\pi^\theta (a_t;s_t)) Q_t^{\pi^\theta} (s_t,a_t) \mathbb{P}_\mu^{\pi^\theta}(\tau = (s_0,a_0,r_0,...,s_{T-1},a_{T-1},r_{T-1})) \\
+    &= \sum_{\tau \in \mathcal{T}} \sum_{t=0}^{T-1} \nabla_\theta \log (\pi^\theta (a_t;s_t)) Q_t^{\pi^\theta} (s_t,a_t)  \frac{\mathbb{P}_\mu^{\pi^\theta}(\tau = (s_0,a_0,r_0,...,s_{T-1},a_{T-1},r_{T-1}))}{\mathbb{P}_\mu^{\pi^b}(\tau = (s_0,a_0,r_0,...,s_{T-1},a_{T-1},r_{T-1}))} \mathbb{P}_\mu^{\pi^b}(\tau = (s_0,a_0,r_0,...,s_{T-1},a_{T-1},r_{T-1})) \\
+    &\stackrel{(*)}{=} \sum_{\tau \in \mathcal{T}} \sum_{t=0}^{T-1} \nabla_\theta \log (\pi^\theta (a_t;s_t)) Q_t^{\pi^\theta} (s_t,a_t) \prod_{i=0}^{T-1} \frac{\pi^\theta(a_i;s_i}{\pi^b (a_i;s_i)}  \mathbb{P}_\mu^{\pi^b}(\tau = (s_0,a_0,r_0,...,s_{T-1},a_{T-1},r_{T-1})) \\
+    &= \mathbb{E}_\mu^{\pi^b}[\sum_{t=0}^{T-1} \nabla_\theta \log (\pi^\theta (A_t;S_t)) Q_t^{\pi^\theta} (S_t,A_t) \prod_{i=0}^{T-1} \frac{\pi^\theta(A_i;S_i)}{\pi^b (A_i;S_i)} ]
+\end{align*}
+altough we used in $(*)$ that
+\begin{align*}
+    & \frac{\mathbb{P}_\mu^{\pi^\theta}(\tau = (s_0,a_0,r_0,...,s_{T-1},a_{T-1},r_{T-1}))}{\mathbb{P}_\mu^{\pi^b}(\tau = (s_0,a_0,r_0,...,s_{T-1},a_{T-1},r_{T-1}))} \\
+    &= \frac{\mu(s_0) \pi^\theta(a_0;s_0) \prod_{i=1}^{T-1} p(s_i,r_{i-1};s_{i-1},a_{i-1}) \pi^\theta (a_i;s_i)}{\mu(s_0) \pi^b(a_0;s_0) \prod_{i=1}^{T-1} p(s_i,r_{i-1};s_{i-1},a_{i-1}) \pi^b (a_i;s_i)} \\
+    &= \frac{\prod_{i=0}^{T-1} \pi^\theta (a_i;s_i)}{\prod_{i=0}^{T-1} \pi^b (a_i;s_i)}.
+\end{align*}
+}
+Note that numerically the term 
+$$
+\frac{\prod_{i=0}^{T-1} \pi^\theta (a_i;s_i)}{\prod_{i=0}^{T-1} \pi^b (a_i;s_i)}
+$$
+can explode when $\pi^b$ is small and differs a lot from $\pi^\theta$. Thus one wants to choose a $\pi^b$ that is similiar to $\pi^\theta$ in order to reduce varinance!\\
+Another way is to reuse samples, i.e. sample from $\pi^b$ and then use it to evaluate all following $\pi^{\theta_k}$. This only works well if this one behavioral is similiar to the others. Another way is to do clustering on the space of the policies, i.e. on $\{x \in [0,1]^\mathcal{A} \mid \sum_{a \in \mathcal{A}} x_a =1 \}$. Here one needs a different definition a distance! Then using these clusters one can sample from the cluster centers in order to evaluate the policies from these clusters using the samples from the cluster center.
+
+\chapter{Important Exercises (29)}
+
+\textbf{Exercises 1 Nr. 2} \\
+a) If the failure probability does not decay to zero, then the regret grows linearly, i.e.
+$$
+\tau_t (\pi) := \mathbb{P}^\pi (Q_{A_t} \neq Q_*) \to c>0, \quad t \to \infty \quad \Rightarrow \quad R_n(\pi) \in \mathcal{O}(n).
+$$
+\pf{
+If the failure probability does not decay to zero (and does not alternate) then
+$$
+\exists c>0, T\geq 1 \forall t>T: \quad \tau_t (\pi) >c.
+$$
+Then it holds for all $n > T$ that
+\begin{align*}
+    R_n (\pi)& \geq \min_{a \neq a^*} \Delta_a \left( \sum_{t=1}^T  \tau_t (\pi)+ (n-T) c \right)\\
+    & \geq \min_{a \neq a^*} \Delta_a c \min\{T-1,n-T\} 
+\end{align*}
+Thus $R_n (\pi)$ grows at least linear. It grows at most linear due to the fact that all learning strategies grow at most linear:
+$$
+R_n (\pi) \leq \max_{a \in \mathcal{A}} \Delta_a \sum_{t=1}^n \tau_t (\pi) \leq \max_{a \in \mathcal{A}} \Delta_a\cdot n.
+$$
+}
+b) If the failure probability behaves like $\tau_t (\pi) \in \mathcal{O}(\frac{1}{n})$ then the regret is in $R_n (\pi) \in \mathcal{O} (\sum_{a \in \mathcal{A}} \log (n)) = \mathcal{O}(\log (n))$.
+\pf{
+Note that $\{1,...,n\} \subset [1,n]$ and that and that we can interpret $\sum_{t=2}^n \frac{1}{t}$ as upper bound of the integral and $\sum_{t=1}^{n-1} \frac{1}{t}$, where each decompose $[1,n]$ into $n$-disjoint subsets of length 1:
+$$
+\sum_{t=2}^n \frac{1}{t} \leq \int_1^n \frac{1}{t} dt \leq \sum_{t=1}^{n-1} \frac{1}{t}.
+$$
+Thus it holds
+$$
+\sum_{t=1}^n \frac{1}{t} \geq \sum_{t=1}^{n-1} \geq \int_1^n \frac{1}{t} dt = \log (n)
+$$
+and
+$$
+\sum_{t=1}^n \frac{1}{t}  \leq 1 + \sum_{t=2}^n \frac{1}{t} \leq 1+ \int_1 ^n  \frac{1}{t} dt = 1+ \log (n).
+$$
+Plugging all in yields the upper bound
+$$
+R_n (\pi) \leq \max_{a \in \mathcal{A}} \Delta_a \sum_{t=1}^n \tau_t (\pi)\leq  \max_{a \in \mathcal{A}} \Delta_a \sum_{t=1}^n \frac{1}{t} \leq \max_{a \in \mathcal{A}} \Delta_a (1+ \log (n)).
+$$
+and the lower bound
+$$
+R_n (\pi) \geq \min_{a \neq a^*} \Delta_a \sum_{t=1}^n \tau_t (\pi)\geq  \min_{a \neq a^*} \Delta_a \sum_{t=1}^n \frac{1}{t} \geq \min_{a \neq a^*} \Delta_a \log (n).
+$$
+}
+
+
+\textbf{Exercises 1 Nr. 3} \\
+
+\textbf{Exercises 1 Nr. 5} \\
+
+Let $\pi$ be an $\epsilon$-greedy learning strategy that first plays every arm once. For a $1$-Subgaussian Bandit model $\nu$ it holds that
+$$
+\lim_{n \to \infty} \frac{R_n (\pi)}{n} = \frac{\epsilon}{K} \sum_{a \in \mathcal{A}} \Delta_a.
+$$
+\pf{
+We have for all $t \geq K$ (i.e. after exploring every arm once) that
+$$
+\mathbb{P}(A_t^\pi =a) = \frac{\epsilon}{K} + (1-\epsilon) \mathbb{P}(\hat{Q}_a (t) \geq \max_b \hat{Q}_b (t))
+$$
+So with probability $\epsilon$ uniform and with probability $(1-\epsilon)$ the best arm. The lower bound follows easily by leaving a summand away:
+\begin{align*}
+    \lim_{n \to \infty} \frac{R_n (\pi)}{n} &= \lim_{n \to \infty} \frac{1}{n} \sum_{a \in \mathcal{A}} \Delta_a \sum_{t=1}^n \mathbb{P}(A_t^\pi =a)\\
+    &\geq \sum_{a \in \mathcal{A}} \Delta_a \lim_{n \to \infty} \frac{1}{n} \sum_{t=1}^n \frac{\epsilon}{K} \\
+    &= \sum_{a \in \mathcal{A}} \Delta_a \frac{\epsilon}{K}
+\end{align*}
+Now one needs to show that
+$$
+\sum_{t=1}^\infty \mathbb{P} (\hat{Q}_a (t) \geq \max_b \hat{Q}_b (t)) \leq C < \infty.
+$$
+This is very long and difficult. We skip this. Then one can show that
+\begin{align*}
+    \lim_{n \to \infty} \frac{R_n (\pi)}{n} &= \lim_{n \to \infty} \frac{1}{n} \sum_{a \in \mathcal{A}} \Delta_a \sum_{t=1}^n \mathbb{P}(A_t^\pi =a)\\
+    &\leq \sum_{a \in \mathcal{A}} \Delta_a \lim_{n \to \infty} \frac{1}{n} \sum_{t=1}^n \left( \frac{\epsilon}{K} + \mathbb{P} (\hat{Q}_a (t) \geq \max_b \hat{Q}_b (t)) \right)\\
+    &\leq  \sum_{a \in \mathcal{A}} \Delta_a (\frac{\epsilon}{K}+ \lim_{n \to \infty} \frac{C}{n}) \\
+    &= \sum_{a \in \mathcal{A}} \Delta_a \frac{\epsilon}{K}.
+\end{align*}
+The assertion follows.
+}
+
+
+
+\textbf{Exercises 3 Nr. 1} \\
+Suppose a $1-$Subgaussian Bandit model $\nu$ and $\pi$ as the UCB learning strategy. Then it holds that the event $\hat{Q}_a (t) < Q_a (t) + \Delta$ given that $T_a (t) > \frac{2 \log (1/\delta)}{\Delta_a^2}$ is given by at most $1-\delta$.
+\pf{
+First note that that the UCB algorithm always plays every arm once in the beginning, i.e. it definitely holds that for $n$ rounds that
+$$
+\forall m=1,...,n-(K-1): \quad \mathbb{P}^\pi (T_a (t) =m) >0.
+$$
+Further, it clearly the following equivalence holds
+$$
+T_a (t) > \frac{2 \log (1/\delta)}{\Delta_a^2} \quad \iff \quad \Delta_a^2 > \frac{2 \log (1/\delta)}{T_a (t)}.
+$$
+Next we can calculate the following lower bound
+\begin{align*}
+    &\mathbb{P}^\pi \left ( \hat{Q}_a (t) < Q_a + \Delta_a \mid T_a (t) > \frac{2 \log (1/\delta)}{T_a (t)}   \right) \geq  \mathbb{P}^\pi \left ( \hat{Q}_a (t) -Q_a < \frac{2 \log (1/\delta)}{T_a (t)} \mid T_a (t) > \frac{2 \log (1/\delta)}{T_a (t)}   \right) \\
+    &=  \mathbb{P}^\pi \left ( \hat{Q}_a (t) -Q_a < \frac{2 \log (1/\delta)}{T_a (t)} \mid \bigcup_{m= \lceil \frac{2 \log (1/\delta)}{T_a (t)} \rceil}^{n-(K-1)} T_a (t) =m   \right) \\
+    &\stackrel{???}{\geq} \frac{ \sum_{m= \lceil \frac{2 \log (1/\delta)}{T_a (t)} \rceil}^{n-(K-1)} \mathbb{P}^\pi \left ( \hat{Q}_a (t) -Q_a < \frac{2 \log (1/\delta)}{T_a (t)} , T_a (t) =m   \right)}{\sum_{m= \lceil\frac{2 \log (1/\delta)}{T_a (t)} \rceil}^{n-(K-1)}  \mathbb{P}^\pi (T_a (t) =m )} \\
+    &\stackrel{CounterProb}{=}\frac{ \sum_{m= \lceil \frac{2 \log (1/\delta)}{T_a (t)} \rceil}^{n-(K-1)} \left(  \mathbb{P}^\pi (T_a (t)=m)- \mathbb{P}^\pi \left ( \hat{Q}_a (t) -Q_a \geq \frac{2 \log (1/\delta)}{T_a (t)} , T_a (t) =m   \right) \right)}{\sum_{m= \lceil\frac{2 \log (1/\delta)}{T_a (t)} \rceil}^{n-(K-1)}  \mathbb{P}^\pi (T_a (t) =m )}.
+\end{align*}
+Now we shortly focus on of the terms above
+\begin{align*}
+    \mathbb{P}^\pi \left ( \hat{Q}_a (t) -Q_a \geq \frac{2 \log (1/\delta)}{T_a (t)} , T_a (t) =m   \right) &= \mathbb{P}^\pi \left ( \frac{1}{T_a (t)} \sum_{i=1}^t X_i \textbf{1}_{A_i =a} -Q_a \geq \frac{2 \log (1/\delta)}{T_a (t)} , T_a (t) =m   \right) \\
+    &= \mathbb{P}^\pi \left ( \frac{1}{m} \sum_{i=1}^t X_i \textbf{1}_{A_i =a} -Q_a \geq \frac{2 \log (1/\delta)}{m} , T_a (t) =m   \right) \\
+    &= \mathbb{P}^\pi \left ( \frac{1}{m} \sum_{i=1}^t X_i \textbf{1}_{A_i =a} -Q_a \geq \frac{2 \log (1/\delta)}{m} \mid T_a (t) =m   \right) \mathbb{P}^\pi (T_a (t) =m) \\
+    &\leq \delta\mathbb{P}^\pi (T_a (t) =m),
+\end{align*}
+where we used in the last step Hoeffdings Lemma, because the conditional probability is also a measure. Now plugging this into the main calculation leads to
+\begin{align*}
+    &\mathbb{P}^\pi \left ( \hat{Q}_a (t) < Q_a + \Delta_a \mid T_a (t) > \frac{2 \log (1/\delta)}{T_a (t)}   \right) \\
+    &\geq \frac{ \sum_{m= \lceil \frac{2 \log (1/\delta)}{T_a (t)} \rceil}^{n-(K-1)} \left(  \mathbb{P}^\pi (T_a (t)=m)- \mathbb{P}^\pi \left ( \hat{Q}_a (t) -Q_a \geq \frac{2 \log (1/\delta)}{T_a (t)} , T_a (t) =m   \right) \right)}{\sum_{m= \lceil\frac{2 \log (1/\delta)}{T_a (t)} \rceil}^{n-(K-1)}  \mathbb{P}^\pi (T_a (t) =m )} \\
+    &\geq \frac{ \sum_{m= \lceil \frac{2 \log (1/\delta)}{T_a (t)} \rceil}^{n-(K-1)} \left(  \mathbb{P}^\pi (T_a (t)=m)- \delta \mathbb{P}^\pi (T_a (t) =m) \right)}{\sum_{m= \lceil\frac{2 \log (1/\delta)}{T_a (t)} \rceil}^{n-(K-1)}  \mathbb{P}^\pi (T_a (t) =m )} \\
+    &= 1- \delta.
+\end{align*}
+}
+
+
+\textbf{Exercises 3 Nr. 2} \\
+
+\textbf{Exercises 3 Nr. 3} \\
+For the estimator unbiased estimator
+$$
+(X_A -b) \nabla \log (\pi^\theta (A)), \quad A \sim \pi^\theta, X_A \sim P_A
+$$
+the choice of $b \in \mathbb{R}$ that minimizes the variance is given by
+$$
+b^* = \frac{\mathbb{E}[ X_A \| \nabla \log (\pi^\theta (A)) \|^2_2 ]}{\mathbb{E}[\| \nabla \log (\pi^\theta (A)) \|^2_2]}.
+$$
+\pf{
+First note that for a random vector $X \in \mathbb{R}^d$ it holds that
+$$
+\mathbb{V}[X] = \mathbb{E}[XX^T] - \mathbb{E}[X] \mathbb{E}[X]^T = \mathbb{E}[\|X\|_2^2] - \|\mathbb{E}[X]\|_2^2.
+$$
+We then get
+\begin{align*}
+    \mathbb{V}[(X_A -b) \nabla \log (\pi^\theta (A))] &= \mathbb{E}[(X_A -b)^2 \| \nabla \log (\pi^\theta (A))\|_2^2] - \|\mathbb{E}[(X_A -b) \nabla \log (\pi^\theta (A))]\|_2^2 \\
+     &\stackrel{BaselineTrick}{=} \mathbb{E}[(X_A -b)^2 \| \nabla \log (\pi^\theta (A))\|_2^2] - \|\mathbb{E}[X_A  \nabla \log (\pi^\theta (A))]\|_2^2 \\
+     &= \mathbb{E}[(X_A -b)^2 \| \nabla \log (\pi^\theta (A))\|_2^2] - \|\mathbb{E}[X_A  \nabla \log (\pi^\theta (A))]\|_2^2
+\end{align*}
+We now make this to an easy quadratic equation by defining $f(A) := \|\nabla \log (\pi^\theta (A))\|_2$ and then get that
+\begin{align*}
+   \frac{\partial}{\partial b} \mathbb{V}[(X_A -b) \nabla \log (\pi^\theta (A))] &= \mathbb{E}[X_A^2 f(A)^2 ] -2  \mathbb{E}[X_A b f(A)^2 ] + b^2  \mathbb{E}[ f(A)^2 ]-\|\mathbb{E}[X_A  \nabla \log (\pi^\theta (A))]\|_2^2\\
+    & \stackrel{!}{=} 0 \quad \iff \quad 2b  \mathbb{E}[ f(A)^2 ]-2  \mathbb{E}[X_A f(A)^2 ] =0
+\end{align*}
+which leads to
+$$
+b^* = \frac{ \mathbb{E}[X_A f(A)^2 ]}{ \mathbb{E}[ f(A)^2 ]} =  \frac{\mathbb{E}[ X_A \| \nabla \log (\pi^\theta (A)) \|^2_2 ]}{\mathbb{E}[\| \nabla \log (\pi^\theta (A)) \|^2_2]}.
+$$
+This also a minimum due to the fact that 
+$$
+\frac{\partial^2}{\partial b^2} \mathbb{V}[(X_A -b) \nabla \log (\pi^\theta (A))] =2 \mathbb{E}[ f(A)^2 ] \geq 0, \quad a.s.???
+$$
+}
+
+\textbf{Exercises 3 Nr. 4} \\
+Show that given an MDP and a stationary policy it holds that
+\begin{align*}
+&\mathbb{P}((S_{t+1},A_{t+1},R_{t+1})=(s_{t+1},a_{t+1},r_{t+1}) \mid (S_0,A_0)=(s_0,a_0),...,(S_t,A_t)=(s_t,a_t))) \\
+=&\mathbb{P}((S_{t+1},A_{t+1},R_{t+1})=(s_{t+1},a_{t+1},r_{t+1}) \mid (S_t,A_t)=(s_t,a_t))) 
+\end{align*}
+is time homogenuous Markov rewards chain with transition probability
+$$
+p_{(s,a),(s^\prime,a^\prime,r^\prime)} = p(s^\prime,r^\prime ;s,a) \pi(a^\prime;s^\prime).
+$$
+\pf{
+The proof is anlogously to the Markov chain proof:
+\begin{align*}
+    & \mathbb{P}((S_{t+1},A_{t+1},R_{t+1})=(s_{t+1},a_{t+1},r_{t+1}) \mid (S_t,A_t)=(s_t,a_t)))  \\
+    &= \frac{\mathbb{P}((S_{t+1},A_{t+1},R_{t+1})=(s_{t+1},a_{t+1},r_{t+1}) , (S_t,A_t)=(s_t,a_t))) }{\mathbb{P}( (S_t,A_t)=(s_t,a_t))} \\
+    &= \frac{\sum_{s_0,a_0,r_0} \cdots \sum_{s_{t-1},a_{t-1},r_{t-1}} \sum_{r_t}\mathbb{P}(S_0=s_0,A_0=a_0,R_0=r_0,...,S_{t+1}=s_{t+1},A_{t+1}=a_{t+1},R_{t+1}=r_{t+1}) }{\sum_{s_0,a_0,r_0} \cdots \sum_{s_{t-1},a_{t-1},r_{t-1}} \sum_{r_t}\mathbb{P}(S_0=s_0,A_0=a_0,R_0=r_0,...,S_{t}=s_{t},A_{t}=a_{t},R_{t}=r_{t})} \\
+    &= \frac{\sum_{s_0,a_0,r_0} \cdots \sum_{s_{t-1},a_{t-1},r_{t-1}} \sum_{r_t} \mu(s_0) \pi(a_0;s_0) \prod_{i=0}^{t} p(s_{i+1},r_{i};s_i,a_i) \pi(a_{i+1};s_{i+1}) p(\mathcal{S}\times \{r_{t+1}\};s_{t+1},a_{t+1})  }{\sum_{s_0,a_0,r_0} \cdots \sum_{s_{t-1},a_{t-1},r_{t-1}} \sum_{r_t} \mu(s_0) \pi(a_0;s_0) \prod_{i=0}^{t-1} p(s_{i+1},r_{i};s_i,a_i) \pi(a_{i+1};s_{i+1}) p(\mathcal{S}\times \{r_{t}\};s_{t},a_{t}) } \\
+    &= \frac{\sum_{s_0,a_0,r_0} \cdots \sum_{s_{t-1},a_{t-1},r_{t-1}} \sum_{r_t} \mu(s_0) \pi(a_0;s_0) \prod_{i=0}^{t-1} p(s_{i+1},r_{i};s_i,a_i) \pi(a_{i+1};s_{i+1})  }{\sum_{s_0,a_0,r_0} \cdots \sum_{s_{t-1},a_{t-1},r_{t-1}} \mu(s_0) \pi(a_0;s_0) \prod_{i=0}^{t-1} p(s_{i+1},r_{i};s_i,a_i) \pi(a_{i+1};s_{i+1}) p(\mathcal{S}\times \{r_{t}\};s_{t},a_{t}) } \\
+    & \cdot p(s_{t+1},r_{t};s_t,a_t) \pi (a_{t+1};s_{t+1}) p(\mathcal{S}\times \{r_{t+1}\};s_{t+1},a_{t+1})  \\
+    &= \frac{\sum_{r_t}p(s_{t+1},r_{t};s_t,a_t) \pi (a_{t+1};s_{t+1}) p(\mathcal{S}\times \{r_{t+1}\};s_{t+1},a_{t+1}) }{\sum_{r_t} p(\mathcal{S}\times \{r_{t}\};s_{t},a_{t})}\\
+    & = p(s_{t+1},r_{t+1};s_t,a_t) \pi (a_{t+1};s_{t+1}) p(\mathcal{S}\times \{r_{t+1}\};s_{t+1},a_{t+1}) \\
+    &= \frac{\mu(s_0) \pi(a_0;s_0) \prod_{i=0}^{t-1} p(s_{i+1};s_i,a_i) \pi(a_{i+1};s_{i+1})  }{ \mu(s_0) \pi(a_0;s_0) \prod_{i=0}^{t-1} p(s_{i+1};s_i,a_i) \pi(a_{i+1};s_{i+1}) } \\
+    & \cdot p(s_{t+1},r_{t+1};s_t,a_t) \pi (a_{t+1};s_{t+1}) p(\mathcal{S}\times \{r_{t+1}\};s_{t+1},a_{t+1}) \\
+    &= \frac{\sum_{r_0,...,r_t}\mu(s_0) \pi(a_0;s_0) \prod_{i=0}^{t-1} p(s_{i+1},r_{i};s_i,a_i) \pi(a_{i+1};s_{i+1}) p(\mathcal{S}\times \{r_{t}\};s_{t},a_{t})  }{\sum_{r_0,...,r_t} \mu(s_0) \pi(a_0;s_0) \prod_{i=0}^{t-1} p(s_{i+1},r_{i};s_i,a_i) \pi(a_{i+1};s_{i+1}) p(\mathcal{S}\times \{r_{t}\};s_{t},a_{t}) } \\
+    & \cdot p(s_{t+1},r_{t+1};s_t,a_t) \pi (a_{t+1};s_{t+1}) p(\mathcal{S}\times \{r_{t+1}\};s_{t+1},a_{t+1}) \\
+    &= \frac{\sum_{r_0,...,r_t}\mathbb{P}((S_0,A_0,R_0)=(s_0,a_0,r_0),...,(S_{t+1},A_{t+1},R_{t+1})=(s_{t+1},a_{t+1},r_{t+1}))  }{\sum_{r_0,...,r_t} \mathbb{P}((S_0,A_0,R_0)=(s_0,a_0,r_0),...,(S_{t},A_{t},R_{t})=(s_{t},a_{t},r_{t}))}\\
+    & =\mathbb{P}((S_{t+1},A_{t+1},R_{t+1})=(s_{t+1},a_{t+1},r_{t+1}) \mid (S_0,A_0)=(s_0,a_0),...,(S_t,A_t)=(s_t,a_t))) 
+\end{align*}
+where we used in $(*)$ that
+}
+
+
+\textbf{Exercises 4 Nr. 2} \\
+
+\textbf{Exercises 4 Nr. 3} \\
+
+\textbf{Exercises 5 Nr. 1} \\
+
+\textbf{Exercises 5 Nr. 2} \\
+
+\textbf{Exercises 5 Nr. 3} \\
+
+\textbf{Exercises 6 Nr. 1} \\
+
+\textbf{Exercises 6 Nr. 2} \\
+
+\textbf{Exercises 6 Nr. 3} \\
+
+\textbf{Exercises 7 Nr. 1} \\
+
+\textbf{Exercises 8 Nr. 1} \\
+
+\textbf{Exercises 8 Nr. 2} \\
+
+\textbf{Exercises 8 Nr. 3} \\
+
+\textbf{Exercises 9 Nr. 1} \\
+
+\textbf{Exercises 9 Nr. 2} \\
+
+\textbf{Exercises 10 Nr. 1} \\
+
+\textbf{Exercises 10 Nr. 2} \\
+
+\textbf{Exercises 10 Nr. 3} \\
+
+\textbf{Exercises 10 Nr. 4} \\
+
+\textbf{Exercises 10 Nr. 5} \\
+
+\textbf{Exercises 11 Nr. 1} \\
+
+\textbf{Exercises 11 Nr. 2} \\
+
+\end{document}
