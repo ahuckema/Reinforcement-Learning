@@ -1,0 +1,603 @@
+
+
+\documentclass[../main.tex]{subfiles}  % verweist auf die Master‑Datei
+\begin{document}
+
+
+\section{Sample based dynamic Programming}
+
+In the Section above we showed that for a recursion
+$$
+x_i (n+1) :=  (1-\alpha_i (n)) x_i (n) + \alpha_i (n) (F_i (x(n))+\epsilon_i (n) + b_i (n))
+$$
+where
+$$
+F: \mathbb{R}^d \to \mathbb{R}^d, \quad x \mapsto (F_i(x))_{i=1,...,d } = (\mathbb{E}_i [f(x,Z)])_{i=1,...,d }
+$$
+the approximate recursion
+\begin{align*}
+x_i (n+1) &:=  (1-\alpha_i (n)) x_i (n) + \alpha_i (n) (f(x(n),Z_i(n))) \\
+&=   (1-\alpha_i (n)) x_i (n) + \alpha_i (n) (f(x(n),Z_i(n)) + F_i (x(n))-F_i(x(n))) \\
+&=   (1-\alpha_i (n)) x_i (n) + \alpha_i (n) ( F_i (x(n))+\underbrace{f(x(n),Z_i(n))-F_i(x(n))}_{=: \epsilon_i (n)} + \underbrace{0}_{=: b_i (n)})
+\end{align*}
+where for all $n \in \mathbb{N}$ are distributed according to $Z_i^{(n)} \sim \mathbb{P}_i$. Then
+$$
+x_i(n) \to x^* a.s. \quad \iff \quad  \text{ all R-M conditions hold.}
+$$
+We need to show that
+$$
+\mathbb{E}[\epsilon_i (n) \mid \mathcal{F}_n] =0, \quad \mathbb{E}[\epsilon_i (n)^2 \mid \mathcal{F}_n] \leq A+B \|x(n)\|^2, \quad \sum_{i=1}^n \alpha_i(n) =\infty \text{ and } \sum_{i=1}^n \alpha_i(n)^2 <\infty \quad a.s.
+$$
+hold. The first condition is easy (Note we set $b(n) \equiv 0$):
+\begin{align*}
+    \mathbb{E}[\epsilon_i (n) \mid \mathcal{F}_n] &=  \mathbb{E}[f(x(n),Z_i(n)) \mid \mathcal{F}_n] -  \mathbb{E}[F_i (x) \mid \mathcal{F}_n] \\
+    &=  \mathbb{E}[f(x(n),Z_i(n)) \mid \mathcal{F}_n] -F_i (x)   \mathbb{E}[1\mid \mathcal{F}_n] \\
+    &=  \mathbb{E}[f(x(n),Z_i(n)) \mid \mathcal{F}_n] -  \mathbb{E}_i [f(x,Z)] \\
+    &\stackrel{\text{stochastic Processes}}{=}  0.
+\end{align*}
+The second condition is a lot harder to show. The choices of the step sizes, is up to us to choose, but the choice needs to satisfy these two conditions. \\
+Now we will connect to the dynamic Programming algorithm approach of doing Value Iteration and Policy Iteration. We can write the Bellman operators as expectations
+\rmkb{
+\begin{align*}
+    T^\pi V(s) &:= \sum_{a \in \mathcal{A}_s} \pi (a;s) \left( r(s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) V(s^\prime) \right) \\
+    &=\sum_{a \in \mathcal{A}_s} \pi (a;s) \sum_{r \in \mathcal{R}} r\cdot p(r;s,a)+ \sum_{a \in \mathcal{A}_s} \pi (a;s) \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) V(s^\prime) \\
+    &=\sum_{a \in \mathcal{A}_s} \sum_{r \in \mathcal{R}} \sum_{s^\prime \in \mathcal{S}} \pi (a;s)   p(\{r\} \times \{s^\prime\};s,a) \cdot r+ \sum_{a \in \mathcal{A}_s} \sum_{r \in \mathcal{R}} \sum_{s^\prime \in \mathcal{S}} \pi (a;s)  p(\{r\} \times \{s^\prime\};s,a) \cdot \gamma V(s^\prime) \\
+    &= \mathbb{E}_{s}^\pi [R_0+ \gamma V(S_1)].
+\end{align*}
+We want to write this now in the form of the Robins Monro recursion, i.e. in the form
+$$
+\mathbb{E}_{s}^\pi [R_0+ \gamma V(S_1)] = \mathbb{E}_s [f(x,Z)]
+$$
+where $x \in \mathbb{R}^{|\mathcal{S}|}$ is some vector and $Z \sim \mathbb{P}_s$. Now the question is how $f$ and $Z$ look like. We have that
+$$
+Z:=(Z_1,Z_2,Z_3)=(A,R,S^\prime), \quad A \sim \pi(\cdot;s), R\sim p(\{\cdot\} \times \mathcal{S};s,A), S^\prime \sim p(\{R\} \times \{\cdot\};s,A)
+$$
+and thus $f(x,Z):= Z_2(s,Z_1) + \gamma x_{Z_3} $.
+}
+For the Bellman expectation of the Q value, the approach is identical, only that we have $\mathbb{P}_{s,a}^\pi$, thus the first action fixed.
+\rmkb{
+\begin{align*}
+    T^\pi Q (s,a) &:= r(s,a) +\gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} p(s^\prime;s,a) \pi(a^\prime;s^\prime) Q^\pi (s^\prime;a^\prime)  \\
+    &=\sum_{r \in \mathcal{R}} r\cdot p(r;s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} p(s^\prime;s,a) \pi(a^\prime;s^\prime) Q^\pi (s^\prime;a^\prime)\\
+    &= \sum_{r \in \mathcal{R}} \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} \pi (a;s)   p(\{r\} \times \{s^\prime\};s,a) \cdot r+ \gamma \sum_{r \in \mathcal{R}}\sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} p(\{r\} \times \{s^\prime\};s,a) \pi(a^\prime;s^\prime) Q^\pi (s^\prime;a^\prime)\\
+    &= \mathbb{E}_{s,a}^\pi [R_0+ \gamma Q^\pi(S_1,A_1 )].
+\end{align*}
+We want to write this now in the form of the Robins Monro recursion, i.e. in the form
+$$
+\mathbb{E}_{s,a}^\pi [R_0+ \gamma Q^\pi(S_1,A_1 )] = \mathbb{E}_{s,a} [f(x,Z)]
+$$
+where $x \in \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|}$ is some matrix and $Z \sim \mathbb{P}_{s,a}$. Now the question is how $f$ and $Z$ look like. We have that
+$$
+Z:=(Z_1,Z_2,Z_3)=(R,S^\prime,A^\prime), \quad  R\sim p(\{\cdot\} \times \mathcal{S} ;s,a), S^\prime \sim p(\{R\} \times \{\cdot\};s,a), A^\prime \sim \pi(\cdot;S^\prime)
+$$
+and thus $f(x,Z):= Z_1(s,a) + \gamma x_{Z_2,Z_3} $.
+}
+Analogously we can show this for the Bellman optimality operator for $Q$, but not for $V$ as we will see in the following:
+\rmkb{
+\begin{align*}
+    T^* Q (s,a) &:= r(s,a) +\gamma \sum_{s^\prime \in \mathcal{S}}  p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^\pi (s^\prime;a^\prime)  \\
+    &=\sum_{r \in \mathcal{R}} r\cdot p(r;s,a)+ \gamma \sum_{s^\prime \in \mathcal{S}} \sum_{a^{\prime \prime} \in \mathcal{A}_{s^\prime}}  p(s^\prime;s,a) \pi(a^{\prime \prime};s^\prime) \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^\pi (s^\prime;a^\prime) \\
+    &= \sum_{r \in \mathcal{R}} \sum_{s^\prime \in \mathcal{S}} \sum_{a \in \mathcal{A}_{s^\prime}} \pi (a;s)   p(\{r\} \times \{s^\prime\};s,a) \cdot r+ \gamma \sum_{r \in \mathcal{R}} \sum_{s^\prime \in \mathcal{S}} \sum_{a^{\prime \prime} \in \mathcal{A}_{s^\prime}} p(\{r\} \times \{s^\prime\};s,a) \pi(a^{\prime \prime};s^\prime) \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^\pi (s^\prime;a^\prime)\\
+    &= \mathbb{E}_{s,a}^\pi [R_0+ \gamma \max_{a^\prime \in \mathcal{A}_{S_1}} Q^\pi(S_1,a^\prime )].
+\end{align*}
+We want to write this now in the form of the Robins Monro recursion, i.e. in the form
+$$
+\mathbb{E}_{s,a}^\pi [R_0+ \gamma \max_{a^\prime \in \mathcal{A}_{S_1}} Q^\pi(S_1,a^\prime )] = \mathbb{E}_{s,a} [f(x,Z)]
+$$
+where $x \in \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|}$ is some matrix and $Z \sim \mathbb{P}_{s,a}$. Now the question is how $f$ and $Z$ look like. We have that
+$$
+Z:=(Z_1,Z_2)=(R,S^\prime), \quad  R\sim p(\{\cdot\} \times \mathcal{S};s,a), S^\prime \sim p(\{R\} \times \{\cdot\};s,a) ???
+$$
+and thus $f(x,Z):= Z_1(s,a) + \gamma \max_{a^\prime \in \mathcal{A}_{Z_2}} x_{Z_2,a^\prime} $.\\
+Now one would also like to do apply the Robins Monro algorithm for $T^*V$, but here we get the problem that
+\begin{align*}
+    T^*V (s) &= \max_{a \in \mathcal{A}_s} \left( r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) V(s^\prime) \right) \\
+    &= \max_{a \in \mathcal{A}_s} \mathbb{E}_{s,a}^\pi [R_0+\gamma V(S_1)]
+\end{align*}
+But we have no way to sample this function, as the maximum is outside of the expectation.
+}
+In the stochastic control community, they often use $T^*V$ in order to calculate the optimal policy, as the vector $V$ is a lot smaller than the matrix $Q$. But with our Robin Monro approach, we cannot sample from $T^*V$, thus we only have the ability to use $T^*Q$.
+
+
+\subsection{Sample based policy evaluation algorithms}
+\thm{}{
+Suppose we have $\pi \in \Pi_s$ and the reward distribution has bounded second moments, i.e.
+$$
+\forall s,s^\prime \in \mathcal{S},a \in \mathcal{A}_s: \quad \mathbb{E}_{s,a}[R^2] <\infty, \quad R\sim p(\{\cdot\} \times \{s^\prime\};s,a)
+$$
+then for any initial vector $V_0 \in \mathbb{R}^{|\mathcal{S}|}$ we define the (totally asynchronous) update rule
+$$
+V_s (n+1) :=(1-\alpha_s (n)) V_s (n) + \alpha_s (n) (r_n+ \gamma V_{s_n^\prime} (n)),
+$$
+where $a\sim \pi(\cdot;s)$, $(s_n^\prime,r_n) \sim p(\cdot;s,a)$ and the step size satisfies
+$$
+\alpha_{s^\prime_n} (n) \in (0,1) \text{ and all other are zero, i.e. } \alpha_s (n) =0, s \neq s_n^\prime
+$$
+and it satisfies the Robins Monro condition, i.e. for all $s \in \mathcal{S}$
+$$
+\sum_{n =1}^\infty \alpha_s (n) =\infty, \quad \text{ and }\quad \sum_{n =1}^\infty \alpha_s (n)^2 <\infty, \quad a.s.
+$$
+Then it follows that $\lim_{n \to \infty} V(n) =V^*$ $a.s.$
+}
+
+\pf{
+Zweiter Stichpunkt letzes ungleichheitszeichen $x \leq 1+x^2$ ???
+}
+We can only update totally asynchronously, because we can only simulate one step.
+\rmkb{
+It is very important to note that the choice of the $\alpha_s(n)$ satisfying these two conditions theoretically from Robins Monro is necessary, but not sufficient, because the underlying policy has to ensure that every state is explored infinitely often in order for $n \to \infty$ in every state.
+}
+
+\thm{}{
+Suppose we have $\pi \in \Pi_s$ and the reward distribution has bounded second moments, i.e.
+$$
+\forall s,s^\prime \in \mathcal{S},a \in \mathcal{A}_s: \quad \mathbb{E}_{s,a}[R^2] <\infty, \quad R\sim p(\{\cdot\} \times \{s^\prime\};s,a)
+$$
+then for any initial matrix $Q_0 \in \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|}$ we define the (totally asynchronous) update rule
+$$
+Q_{s,a} (n+1) :=(1-\alpha_s (n)) Q_{s,a} (n) + \alpha_s (n) (r_n+ \gamma Q_{s^\prime_n,a^\prime_n} (n)),
+$$
+where $(s_n^\prime,r_n) \sim p(\cdot;s,a)$, $a_n^\prime \sim \pi(\cdot;s)$ and the step size satisfies
+$$
+\alpha_{s^\prime_n,a^\prime_n} (n) \in (0,1) \text{ and all other are zero, i.e. } \alpha_{s,a} (n) =0, (s,a) \neq (s_n^\prime,a_n^\prime)
+$$
+and it satisfies the Robins Monro condition, i.e. for all $s \in \mathcal{S}$ and $a \in \mathcal{A}$
+$$
+\sum_{n =1}^\infty \alpha_{s,a} (n) =\infty, \quad \text{ and }\quad \sum_{n =1}^\infty \alpha_{s,a} (n)^2 <\infty, \quad a.s.
+$$
+Then it follows that $\lim_{n \to \infty} Q(n) =Q^*$ $a.s.$
+}
+
+Here again the issue is that the policy needs to ensure that all state action pairs are explored infinitely often. The theorems of Robins Monro only tells us to explore infinitely often, but not on how exactly to explore. This leads us again to the bandit problems of exploration vs. exploitation.
+
+\rmkb{
+A reasonable choice for the step size is
+$$
+\alpha_s (n) = \frac{1}{(T_s (n) +1)^p}, \quad \alpha_{a,s} (n)= \frac{1}{(T_{s,a} (n) +1)^p}, \quad p \in (1/2,1]
+$$
+because then the two Robins Monro conditions hold. Here $T_{s,a}(n)$ is the number of times the state-action pair $(s,a)$ was updated during the first $n$ updates.
+}
+
+\begin{algorithm}[H]
+\caption{Totally asynchronous policy evaluation for $V^\pi$}
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{Policy $\pi \in \Pi$, discount factor $\gamma \in (0,1)$, learning rate schedule $\{\alpha(s)\}$}
+\Output{Approximation $V \approx V^\pi$}
+
+\textbf{Initialize} $V \equiv 0$\\
+$stop \gets \text{False}$\\
+
+\While{$stop = \text{False}$}{
+  \tcp{Pick a state, sample reward and next state, then update $V$.}
+  Choose state $s$ (e.g.\ randomly or in sequence).\\
+  $a \sim \pi(\cdot \,;\, s)$\\
+  \textbf{Observe} $R(s,a)$ and $s' \sim p(\cdot \,;\, s,a)$\\
+  $\alpha \gets \alpha(s)$\\
+  \tcp{Update rule for approximate policy evaluation}
+  \[
+    V(s) \gets V(s) \;+\; \alpha \,
+    \Bigl(R(s,a) \;+\; \gamma\,V(s') - V(s)\Bigr)
+  \]
+
+  \tcp{Stopping criterion or convergence test here}
+  \If{\text{converged}}{
+     $stop \gets \text{True}$
+  }
+}
+
+\Return{$V$}\\
+\end{algorithm}
+
+
+\begin{algorithm}[H]
+\caption{Totally asynchronous policy evaluation for $Q^\pi$}
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{Policy $\pi \in \Pi$, discount factor $\gamma \in (0,1)$, learning rate schedule $\{\alpha(s,a)\}$}
+\Output{Approximation $Q \approx Q^\pi$}
+
+\textbf{Initialize} $Q \equiv 0$\\
+$stop \gets \text{False}$\\
+
+\While{$stop = \text{False}$}{
+  \tcp{Pick a state-action pair, sample reward and next state, then update $Q$.}
+  Choose $(s,a)$ (e.g.\ randomly or in sequence).\\
+  \textbf{Observe} $R(s,a)$ and $s' \sim p(\cdot \,;\, s,a)$\\
+  $a' \sim \pi(\cdot \,;\, s')$\\
+  $\alpha \gets \alpha(s,a)$\\
+  \tcp{Update rule for approximate Q-value evaluation}
+  \[
+    Q(s,a) \gets Q(s,a) \;+\; \alpha \,
+    \Bigl(R(s,a) \;+\; \gamma\,Q\bigl(s',a'\bigr) - Q(s,a)\Bigr)
+  \]
+
+  \tcp{Stopping criterion or convergence test here}
+  \If{\text{converged}}{
+     $stop \gets \text{True}$
+  }
+}
+
+\Return{$Q$}\\
+\end{algorithm}
+
+These two algorithms are both off policy algorithms, i.e. they do not play according to the Policy, but according to some exploration scheme.
+
+
+
+\subsection{Q-learning and the SARSA trick}
+We now come to the most famous tabular control algorithm: Q-learning, which is numerically solving the iteration $T^* Q$ of the Bellman optimality operator.
+\begin{itemize}
+    \item Advantage: Flexibility in the exploration of the state action space. We will soon call this off Policy.
+    \item Drawback: Very slow, because a special case of it is the LLN, which is very slow in the $L^2$-error. Further, as we will show, there will be a problem of overestimation.
+\end{itemize}
+
+\thm{Q-Learning}{
+Suppose that the reward distribution has bounded second moments, i.e.
+$$
+\forall s,s^\prime \in \mathcal{S}, a \in \mathcal{A}_s: \quad \mathbb{E}_{s,a} [R^2] < \infty, \quad R\sim p(\{\cdot\}\times \{s^\prime\};s,a)
+$$
+Then for any initial matrix $Q_0 \in \mathbb{R}^{|\mathcal{S}| \cdot |\mathcal{A}|}$ we define the (aysnchornous) update rule
+$$
+Q_{s,a} (n+1) := (1-\alpha_{s,a} (n)) Q_{s,a}(n) + \alpha_{s,a} (n) (r_n + \gamma \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q_{s^\prime,a^\prime} (n) - Q_{s,a}(n) ),
+$$
+where we assume that $(r_n,s^\prime) \sim p(\cdot;s,a)$ and $\alpha(n)$ only depends on the past steps and almoust surely satisfies the Robins-Monro Conditions for every $(s,a) \in \mathcal{S} \times \mathcal{A} $. Then it follows that
+$$
+\lim_{n \to \infty} Q(n) = Q^* \quad a.s.
+$$
+}
+\pf{
+The proof is similiar, with the only difference that we use the Bellman optimality operator
+$$
+T^* Q(s,a) = \mathbb{E}_{s,a}[R_0 + \gamma \max_{a^\prime \in \mathcal{A}_{S_1}} Q(S_1,a^\prime) ]
+$$
+on $\mathbb{R}^{|\mathcal{S}| \cdot |\mathcal{A}|}$. ...
+}
+Implimentation: \\
+What we can do is run trough the state action space according to some scheme and and in each step update one $Q_{s,a}(n)$ using totally asynchronous updates. But this very similiar to the bandit situation, as we need a method of exploration, that is smart in order to ensure, that we do not waste our exploration on state action pairs, that are not good.
+\rmkb{
+As for convergence the step size sequence $(\alpha_n)_{n \in \mathbb{N}}$ only needs to satisfy the Robins Monro condition and be adapted to the past steps (i.e. only depend on the past and not the future) we have a lot of freedom in choosing it in a certain way. But it is important to note that we need to explore every state infinitely often.
+}
+There are four typicall methods that are used for exploration
+\begin{itemize}
+    \item Uniformly choose $(s,a)$ in each step.
+    \item Run through $(s,a)$ using some fixed policy $\pi$ (behaviroial policy)
+    \item Act $\epsilon$-greedy wrt. the current estimate $Q(n)$
+    \item Act soft $\epsilon-$greedy wrt. the current $Q(n)$ (Boltzman exploration)
+\end{itemize}
+Similiarly to stochastic bandits we can choose $\epsilon$ tending to zero. But we need to be carefull, that we still visit every state action pair infinitely often. We want to find a behavioral policy that explores the state space smart, i.e. avoid state action pairs that are definitely not relevant and instead ones that are relevant. The following algorithm chooses the next action according to some behavioral policy.
+
+\begin{algorithm}[H]
+\caption{Q-learning}
+\SetKwInOut{Input}{Input}
+\SetKwInOut{Output}{Output}
+
+\Input{Behavior policy $\pi \in \Pi_S$, discount factor $\gamma$}
+\Output{Approximations $Q \approx Q^*$, \ \ $\mathrm{greedy}(Q) = \pi \approx \pi^*$}
+
+Initialize $Q$ (e.g.\ $Q \equiv 0$);\\
+\While{not converged}{
+    Initialise $s$;\\
+    \While{$s$ not terminal}{
+        Sample action $a$. (e.g.\ randomly, according to a behavior policy, $\varepsilon$-(soft)-greedy);\\
+        Sample reward $R(s,a)$;\\
+        Sample $s' \sim p(\,\cdot\mid s,a)$;\\
+        Determine stepsize $\alpha$;\\
+        Update 
+        \[
+          Q_{s,a}
+          = 
+          (1-\alpha)\,Q_{s,a}
+          + 
+          \alpha\bigl(R(s,a) + \gamma \max_{a'\in A_{s'}} Q_{s',a'}\bigr)
+        \];\\
+        Set $s = s'$;\\
+    }
+}
+\Return{$Q$}
+\end{algorithm}
+
+\defn{}{
+An exploration mechanism is called off-policy, if the current action does not depend on the current policy/Q-Values. It is called on-policy if this exploration mechanism uses current estimated Q-values or information of the policy. 
+}
+One preffers on-policy exploration mechanism, as they use more information as off-policy methods???\\
+Intuition of Q-Learning:\\
+The algorithm challenges the old estimate $Q(s,a)$ with a new estimate $R(s,a)$ (the reward of taking action $a$ ins state $s$) plus the value of the current best estimate:
+$$
+Q(s,a) \leftarrow (1-\alpha_n (s,a)) Q (s,a)+ \alpha_n (s,a) (R(s,a)+ \gamma \max_{a^\prime} Q(s^\prime,a^\prime))
+$$
+This is due to: \\
+Let $\pi$ and $\pi^\prime$ be arbitrary policies then
+\begin{align*}
+T^\pi \max_{a \in \mathcal{A}_{s}} Q^{\pi^\prime} (s,a) &= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi (a^\prime;s^\prime) \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^{\pi^\prime} (s^\prime,a^\prime)\\
+&= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^{\pi^\prime} (s^\prime,a^\prime) \underbrace{\sum_{a^\prime \in \mathcal{A}_{s^\prime}} \pi (a^\prime;s^\prime)}_{=1} \\
+&= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^{\pi^\prime} (s^\prime,a^\prime)\\
+&= r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}} \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^{\pi^\prime} (s^\prime,a^\prime)\\
+    &= T^* \max_{a \in \mathcal{A}_{s}} Q^{\pi^\prime} (s,a).
+\end{align*}
+Now let $\pi := greedy (Q^{\pi^\prime})$, then $Q^{\pi} (s,a) = \max_{a \in \mathcal{A}_s} Q^{\pi^\prime} (s,a)$ for $(s,a)$, because with the Lemma that $T^\pi q=T^* q$ is eqivalent to that $\pi$ is greedy wrt. $q$, it follows that
+$$
+Q^{\pi} (s,a)=T^{\pi} Q^{\pi} (s,a) = T^* Q^{\pi}(s,a) = r(s,a) + \gamma \sum_{s^\prime \in \mathcal{S}} p(s^\prime;s,a) \max_{a^\prime \in \mathcal{A}_{s^\prime}}\underbrace{ Q^{\pi} (s^\prime,a^\prime)}_{=\max_{a^\prime \in \mathcal{A}_{s^\prime}}  Q^{\pi} (s^\prime,a^\prime)} = T^* \max_{a \in \mathcal{A}_{s}}  Q^{\pi} (s,a)
+$$
+Because $T^*$ is unqiue and $Q^{\pi} (s,a)=T^* Q^{\pi}(s,a)=T^* \max_{a \in \mathcal{A}_{s}}  Q^{\pi} (s,a)$ the equality follows.\\
+Thus $\max_{a^\prime \in \mathcal{A}_{s^\prime}} Q^\pi (s,a)$ is the best current estimate, because it is the Q function of the greedy policy wrt. the current Q-function.
+
+
+The factor $\alpha_n (s,a)$ is the "trust" we give a new estimate. This should intuitively go to zero and also due to Robins-Monro.\\
+Drawbacks of $Q$-learning:
+\begin{itemize}
+    \item First Note that stochastic fixed point iterations are in general not unbiased, i.e. $\mathbb{E}[x_n]\neq x^*$ for finite $n \in \mathbb{N}$. This is because $\epsilon(n)$ and $b(n)$ are assumed to be positive (bias tends to zero).
+    \item Q-learning considers the function 
+    $$
+    F(Q) := \mathbb{E}[R(s,a)+ \gamma \max_{a^\prime} Q(S_1,a^\prime)].
+    $$
+    Lets consider two actions, i.e. $f(Q) = R(s,a)+ \gamma \max\{Q(s^\prime,a),Q(s^\prime,a^\prime\}$. Making this a little simpler we assume $f(Q)= \gamma \max \{0,Q(s,a)\}$. Then the fixed point iteration 
+    $$
+    Q_{n+1}(s,a) := (1-\alpha_n) Q_n(s,a) + \alpha_n f(Q_n)
+    $$
+    can get stuck. I.e. we have the function $F(x) := \gamma \max \{0,x\}$, for $\gamma <1$. Then we have two cases. If $x_n$ is non-positive, it converges really quickly. If $x_n$ is positive, then it gets stuck/converges really slowly:
+    $$
+    x_{n+1} := (1-\alpha_n) x_n + \alpha_n F(x_n) = \begin{cases}
+        (1-\alpha_n) x_n + 0&, x_n \leq 0\\
+        (1-\alpha_n)x_n + \alpha_n \gamma x_n < x_n &, x_n >0
+    \end{cases}
+    $$
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{Pictures/Q-learning Drawbacks.png}
+    \caption{}
+    \label{fig: Map}
+\end{figure}
+Thus if the $Q$-value is overestimated, then recovery takes a very long time. If it is underestimated, it reaches quickly $Q^*$. But due to
+$$
+\hat{Q}_n (s,a) = Q^* (s,a) + \epsilon_n (s,a)
+$$
+with an error term that does not vanish, the errors can kick us from a value close $Q^*$ away into a positive region, where recovery takes a long time. Thus $Q$-learning by construction overestimates its $Q$-values due to non vanishing errors and the slow recovery from values above.
+\item Next, because we need to explore every state infinitely often, Q-learning is considered to be dangerous, because we also have to explore states that can be known to be dangerous for the agent. It is also not inclined to keep a distance from $(s,a)$ that are deemed as dangerous.
+\end{itemize}
+ 
+\rmkb{
+A first workaround is adding a negative bias term that tends to zero, i.e. satsifies the Robins-Monro condition:
+$$
+Q_n(s,a) = (1-\alpha_n (s,a)) Q_n (s,a) + \alpha_n (n) (R(s,a)+\gamma \max_{a^\prime } Q(s^\prime,a^\prime)+ b_n (s,a))
+$$
+where $s^\prime \sim p(\cdot \times \{R(s,a)\};s,a)$. If $b_n (s,a)$ converges fast enough to zero, then $Q_n$ converges almoust surely to $Q^*$.
+}
+SARSA is another way to tackle the problems above (older than Q-learning). It can reduce playing dangouros action. Later we look at double Q-learning and see it tackles the problem of overestimation.
+\defn{}{
+We call an update mechanism online, if the algorithm only uses currently observed state action pairs. It is called offline, if it uses state action pairs that are not currently observed. (Definition not as in Literature).
+}
+The update mechanism of Q-learning is offline, as it uses with the maximum hypothetical actions, that are not updated. SARSA will be a "online version" on policy (GLIE) version of biased Q-learning.\\
+\rmkb{
+SARSA: (State action Reward (next) state action)\\
+Here the idea is to avoid the maximum, but get it back in the limit. I.e. we construct the behavioral policy of the on-policy exploration mechanism, such that it is greedy in the limit (optimal policies are greedy, i.e. if it converges it will be automatically greedy).
+$$
+Q_n (s,a) \leftarrow (1-\alpha_n (s,a)) Q_n (s,a) + \alpha_n (s,a) (R(s,a) + \gamma Q(s^\prime,a^\prime) )
+$$
+where $s^\prime \sim p(\cdot \times \{R(s,a)\};s,a)$ and $a^\prime \sim \pi (\cdot;s^\prime)$.
+}
+So having a Behavioral policy that is GLIE will be shown to converge to $Q^*$. If we have any other behavioral policy $\pi$ then the same iteration scheme converges to $Q^\pi$ as in the Lemma above. Thus the SARSA trick entirely lies on this GLIE property! This will be seen in the following.
+
+\begin{algorithm}[H]
+\caption{SARSA}
+\SetKwInOut{Input}{Input}
+\SetKwInOut{Output}{Output}
+
+\Input{Behavior policy (GLIE) $\pi\in\Pi_S$, discount factor $\gamma$}
+\Output{Approximations $Q\approx Q^*$,\quad $\mathrm{greedy}(Q)=\pi\approx\pi^*$}
+
+Initialize $Q$, e.g.\ $Q\equiv0$;\\
+\While{not converged}{
+    Initialise $s,a$, e.g.\ uniformly;\\
+    \While{$s$ not terminal}{
+        Determine stepsize $\alpha$;\\
+        Sample reward $R(s,a)$;\\
+        Choose new (behavioral) policy $\pi$ from $Q$ (e.g.\ $\varepsilon$-greedy);\\
+        Sample next state $s'\sim p(\cdot\mid s,a)$;\\
+        Sample next action $a'\sim\pi(\cdot\mid s')$;\\
+        Update
+        \[
+          Q_{s,a}
+          \;\leftarrow\;
+          Q_{s,a}
+          +\alpha_n (s,a)\bigl(R(s,a)+\gamma\,Q_{s',a'}-Q_{s,a}\bigr);
+        \]\\
+        Set $s\leftarrow s'$, $a\leftarrow a'$;\\
+    }
+}
+\Return{$Q$}
+\end{algorithm}
+
+\defn{GLIE}{
+We call an exploration mechanism GLIE, if it is
+\begin{itemize}
+    \item in the limit almoust surely greedy wrt. to state action value function (Q-Value)
+    \item It visists every state action pair infinitely often.
+\end{itemize}
+}
+
+\thm{}{
+Assume that $(Q_n)_{n \in \mathbb{N}}$ is a sequence of matrices obtained from the SARSA algorithm. Further, let the exploration mechanism be GLIE, the step sizes satisfy the Robins Monro condition and the reward distributions having bounded second moments.\\
+Then $\lim_{n \to \infty} Q_n = Q^*$ almoust surely.
+}
+\pf{
+We can write SARSA as Q-learning with a bias term:
+\begin{align*}
+    Q_n (s,a) &=  (1-\alpha_n (s,a)) Q_n (s,a) + \alpha_n (s,a) (R(s,a) + \gamma Q(s^\prime,a^\prime) )\\
+    &=  (1-\alpha_n (s,a)) Q_n (s,a) + \alpha_n (s,a) (R(s,a)+\gamma \max_{a^\prime} Q(s^\prime,a^\prime)+\underbrace{  R(s,a) + \gamma Q(s^\prime,a^\prime) -(R(s,a)+\gamma \max_{a^\prime} Q(s^\prime,a^\prime)}_{=:b_n (s,a)})
+\end{align*}
+And we wrote Q-learning as
+\begin{align*}
+    Q_n (s,a) &= (1-\alpha_n (s,a)) Q_n (s,a) + \alpha_n (s,a) (R(s,a)+\gamma \max_{a^\prime} Q(s^\prime,a^\prime)+b_n (s,a)) \\
+    &= (1-\alpha_n (s,a)) Q_n (s,a) + \alpha_n (s,a) (T^*Q_n(s,a)+R(s,a)+\gamma \max_{a^\prime} Q(s^\prime,a^\prime) - T^* Q_n (s,a) +b_n (s,a))\\
+    &= (1-\alpha_n (s,a)) Q_n (s,a) + \alpha_n (s,a) (T^*Q_n(s,a)+\epsilon_n (s,a) +b_n (s,a))
+\end{align*}
+It remains to show that 
+$$
+|b_n (s,a) |\leq \omega_n (\|Q_n(s,a)\|+1), \quad a.s.
+$$
+for an almost surely zero sequence $(\omega_n)_{n \in \mathbb{N}}$.\\
+This probably comes from bounded second moments and $b_n (s,a) \leq 0$???\\
+With the GLIE property we get that in the limit the bias $b_n$ vanishes, because we choose greedy. The conditions for infinite exploration are necassary such that the step sizes fullfil their properties.
+}
+This theorem is quite trivial, as we assumed our bias that we added to vanish in the limit. 
+\exm{}{
+One example of a GLIE exploration mechanism is if we do it $\epsilon_n := \frac{1}{T_{s,a} (n)}$-greedy.\\
+Another way is Boltzman exploration based on $Q(n)$, i.e.
+$$
+\pi_n (a;s) := \frac{e^{\log (T_{s,a}(n)) \cdot Q_n (s,a)}}{\sum_{b \in \mathcal{A}_s} e^{\log (T_{s,b}(n)) \cdot Q_n (s,b)}}
+$$
+These behavioral polices are greedy in the limit, but also explore every state action pair infinitely often.
+}
+The non-positive Bias term ensures, that Q-values do not get overestimated. Further, neighboring states, i.e. the $s^\prime$ in the formula, that have high variability in their rewards get due to construction an even more negative bias. I.e. in finite time SARSA avoids theses states. But in infinite time, this does not matter. Because bad states can have high variety in their rewards, SARSA learns safer. But very good states could also be high in variety.
+
+\rmkb{
+SARSA is a sample based version of Polciy Iteration. Suppose we have $\epsilon$-greedy exploration. We evaluate the current policy by taking one step/we update the Q-value with one step and then with proability $1-\epsilon$ playing greedy, i.e. policy improvement. (But not quite??? Q-Values do not get deleted?)
+}
+\rmkb{
+Variance reduction applied to $Q-$learning. Before we can talk about this we need to show the following two Bellman-n-step equations
+$$
+T^\pi_n V(s) = \mathbb{E}_s^\pi [R(s,A_0)+ \sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n V(S_n)]
+$$
+and
+$$
+T^\pi_n Q(s,a) = \mathbb{E}_{s,a}^\pi [R(s,a)+ \sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n Q(S_n,A_n)].
+$$
+A unique solution exists, if we show that they are contractions. We do it for $V$:
+\begin{align*}
+    \|T^\pi_n V_1-T^\pi_n V_2\|_\infty &= \max_{s \in \mathcal{S}} | T^\pi_n V_1 (s) -T^\pi_n V_2 (s) | \\
+    &= \max_{s \in \mathcal{S}} | \mathbb{E}_s^\pi [R(s,A_0)+ \sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n V_1(S_n)] \\
+    & -\mathbb{E}_s^\pi [R(s,A_0)+ \sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n V_2(S_n)] | \\
+    &= \max_{s \in \mathcal{S}} | \mathbb{E}_s^\pi [\gamma^n (V_1(S_n)- V_2(S_n))]  | \\
+    &\leq \gamma^n  \max_{s \in \mathcal{S}} | \mathbb{E}_s^\pi [ \max_{s_n \in \mathcal{S}} (V_1(s_n)- V_2(s_n))]  | \\
+    &= \gamma^n  \max_{s_n \in \mathcal{S}} |V_1(s_n)- V_2(s_n)  | \\
+    &= \gamma^n  \|V_1- V_2  \|_\infty.
+\end{align*}
+Analogously for $Q$. In order to show that the fixed point iteration from the Robins-Monro Theorem converges towards that unique fixed point, we need to show that the error term is bounded, i.e.
+$$
+\epsilon_s (n) :=  \left(R(s,A_0)+ \sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n V(S_n) \right)- \mathbb{E}_s^\pi [R(s,A_0)+ \sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n V(S_n)].
+$$
+$\epsilon (n)$ is $\mathcal{F}_n$ measurable, 
+$$
+\mathbb{E}[\epsilon_s(n) \mid  \mathcal{F}_n] = \mathbb{E}_s^\pi [R(s,A_0)+ \sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n V(S_n) \mid \mathcal{F}_n] - \mathbb{E}_s^\pi [R(s,A_0)+ \sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n V(S_n)] =...= 0
+$$
+and
+$$
+\mathbb{E} [\epsilon_s (n)^2 \mid \mathcal{F}_n] \stackrel{hard}{\leq} A+ b \|V\|_\infty.
+$$
+Finally, the n-step Bellman expecation equation and the Bellman expectation equation have the same fixed point, due to
+\begin{align*}
+    T^\pi Q^\pi (s,a) &= r(s,a) + \gamma \sum_{s^\prime,a^\prime} p(s^\prime;s,a) \pi(a^\prime;s^\prime) Q^\pi (s^\prime,a^\prime) \left(= \mathbb{E}_{s,a}^\pi [\gamma R(S_0,A_0) + \gamma Q^\pi (S_1,A_1) ] \right) \\
+    &= r(s,a) + \gamma \sum_{s^\prime,a^\prime} p(s^\prime;s,a) \pi(a^\prime;s^\prime) \left( r(s^\prime,a^\prime) + \gamma \sum_{s^{\prime\prime},a^{\prime\prime}} p(s^{\prime\prime};s^\prime,a^\prime) \pi(a^{\prime\prime};s^{\prime\prime}) Q^\pi (s^{\prime\prime},a^{\prime\prime})\right) \\
+    &= r(s,a) + \gamma \sum_{s^\prime,a^\prime} p(s^\prime;s,a) \pi(a^\prime;s^\prime) r(s^\prime,a^\prime) + \gamma^2 \sum_{s^\prime,a^\prime} p(s^\prime;s,a) \pi(a^\prime;s^\prime) \sum_{s^{\prime\prime},a^{\prime\prime}} p(s^{\prime\prime};s^\prime,a^\prime) \pi(a^{\prime\prime};s^{\prime\prime}) Q^\pi (s^{\prime\prime},a^{\prime\prime})\\
+    &= \mathbb{E}_{s,a}^\pi [ R(s,a) + \gamma R(S_1,A_1) + \gamma^2 Q^\pi (S_2,A_2) ]
+\end{align*}
+Via induction it holds that $T^\pi_n Q^\pi = T^\pi_m Q^\pi$ for all $m \neq n$. Thus the iteration
+$$
+Q_{s,a}(n+1) = (1-\alpha_{s,a}(n)) Q_{s,a}(n) + \alpha_{s,a}(n)(R(s,a)+\sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n Q(S_n,A_n)),
+$$
+converges to the same fixed point almoust surely. If we have $\alpha_{s,a}(n)=\frac{1}{n}$ and $n \to \infty$ then we have just a Monte Carlo approximation (Memory trick). For $n=1$ we have the iteration from theorem that did $T^\pi$. If $n=1$ and we play with a GLIE behavioral policy, then we get SARSA. One can also show that the Bellman optimality operator can be written in the n-step fasion:
+$$
+T^*_n Q =\mathbb{E}_{s,a}^\pi [R(s,a)+\sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n \max_{a^\prime \in \mathcal{A}_{S_n}} Q(S_n,a^\prime) ].
+$$
+Then n-step $Q$-learning is
+$$
+Q_{s,a}(n+1) = (1-\alpha_{s,a}(n)) Q_{s,a}(n) + \alpha_{s,a}(n)(R(s,a)+\sum_{t=1}^{n-1} \gamma^t R(S_t,A_t) + \gamma^n \max_{a^\prime \in \mathcal{A}_{S_n}} Q(S_n,a^\prime)),
+$$
+Again for $n=1$ we have Q-learning and $n \to \infty$ we have Monte Carlo.\\
+The idea is to find a $n$ such that we reduce the variance of the iteration.
+}
+
+
+
+\begin{algorithm}[H]
+\caption{n-Step SARSA}
+\SetKwInOut{Input}{Input}
+\SetKwInOut{Output}{Output}
+
+\Input{Behavior policy (GLIE) $\pi\in\Pi_S$, discount factor $\gamma$}
+\Output{Approximations $Q\approx Q^*$,\quad $\mathrm{greedy}(Q)=\pi\approx\pi^*$}
+
+Initialize $Q$, e.g.\ $Q\equiv0$;\\
+\While{not converged}{
+    Initialise $s,a$, e.g.\ uniformly;\\
+    \While{$s$ not terminal}{
+    Set $R=0$;\\
+    \For{$i=0,...,n-1$}{
+        Sample reward $R(s,a)$;\\
+        Set $R= R+\gamma^{i} R(s,a)$;\\
+        Choose new (behavioral) policy $\pi$ from $Q$ (e.g.\ $\varepsilon_N$-greedy);\\
+        Sample next state $s'\sim p(\cdot\mid s,a)$;\\
+        Sample next action $a'\sim\pi(\cdot\mid s')$;\\
+        }
+        Determine step size $\alpha_N$;\\
+        Update
+        \[
+          Q_{s,a} (N+1)
+          \;\leftarrow\;
+          Q_{s,a}(N)
+          +\alpha_{s,a}(N) \bigl(R(s,a)+\gamma\,Q_{s',a'}(N)-Q_{s,a} (N)\bigr);
+        \]\\
+        Set $s\leftarrow s'$, $a\leftarrow a'$;\\
+    }
+}
+\Return{$Q$}
+\end{algorithm}
+
+
+
+A very important point in these methods is that it all comes down to the behavioral policy. Uniform exploration is really bad, because it takes a lot of time to find out, that the terminal state, is the best state and advantagous to reach. This is why Boltzmann and $\epsilon_n$-greedy are beneficial. Further, if the behavioral policy is initialized in a way (for example by learning iterations before) then convergence will be also a lot faster.
+
+\subsection{Others: Deep Q and alternate interpretation}
+In a game like atarie the entire state space are all the pixels. But in this game particular it would also be playable, if we blurred the image, i.e. having less states. This is beneficial for computational costs. An approach would be to use a neural network to approximate the $Q$-value, i.e. $Q: \mathcal{S}\times  \mathcal{A} \to \mathbb{R}^{\mathcal{S}\cdot  \mathcal{A}} $. This is a non-tabular methods, because if we change one parameter then all outputs are changed. The neural network is the some parameterized function $Q_\Theta$. Problems here are overfitting. One can solve this by learning in batches (backpropagation only after a few steps) or using replay buffers (having batches contain old information, such that it does not forget the old information).\\
+Finally, there is another way of interpreting Q-learning:\\
+We have that
+\begin{align*}
+    \mathbb{E}[X] & \in \arg \min_{\theta} \mathbb{E}[(X-\theta)^2] \\
+    &=\arg \min_{\theta} \frac{1}{2}\mathbb{E}[(X-\theta)^2] =: \arg \min_{\theta}F(\theta)
+\end{align*}
+Then under certain assumptions $\frac{d}{d\theta} F(\theta) =- \mathbb{E}[X-\theta]$. Thus the iteration
+$$
+\theta_{n+1} := \theta_n + \alpha_n (X-\theta_n) = (1-\alpha_n)\theta_n + \alpha X
+$$
+is a gradient descent method, that uses one sample. Because in Q-learning we also have an expectation, one can also interpret it as the same principle. Here then $X:= R_n + \gamma \max_{a^\prime \in \mathcal{A}_{s^\prime_n}} Q_{S_n^\prime,a^\prime} (n)$. Using Extreme Value theory we have that for an unbounded distribution with $u_0$ large enough, we have that for all $u \geq u_0$ holds that
+$$
+(X-u\mid X>u) \sim GPD.
+$$
+Thus it holds that
+$$
+    \mathbb{P}(X \leq t) = \mathbb{P}(X \leq t, X< u) + \mathbb{P}(X \leq t, X\geq u).
+$$
+Now using $Y:= (X-u \mid X>u) \sim GPD$ and for $u< t$ we have that the above is analogously to
+$$
+ \mathbb{P}(X \leq t) = \underbrace{\mathbb{P}(X \leq t, X< u)}_{=\mathbb{P}(X \leq  u)=:\eta} + \underbrace{\mathbb{P}(u< X \leq t)}_{=\mathbb{P}(X-u \leq t,X>u) } = \eta + \mathbb{P}(X>u) \mathbb{P}(Y\leq t) = \eta + (1-\eta) \mathbb{P}(Y\leq t)
+$$
+Now we apply this to $T^* Q(s,a) = \mathbb{E}^\pi_{s,a} [R_0+ \max_{a^\prime \in \mathcal{A}_{s^\prime}} Q(S^\prime,a^\prime)]$, where $(R_0,S^\prime) \sim p(\cdot;s,a)$.\\
+For every $i=1,...,N$ and $(s,a)$ chosen by the exploration mechanism in Q-learning, sample reward and next state and calculate $X_{s,a}^{i} := R_0^{i}+ \max_{a^\prime \in \mathcal{A}_{S^{\prime,i}}} Q(S^{\prime,i},a^\prime)$. Then choose Batch size $n = kN$, i.e $k$ many updates and do for every i=1,...,k:
+\begin{itemize}
+    \item Step 1: Find smallest $u$ such that
+    $$
+    (X_{s,a}^{i} - u \mid X_{s,a}^{i} >u) \sim GPD
+    $$
+    \item Step 2: Define a Generalized linear model
+    $$
+    \mathbb{E}[\textbf{1}_{X_{s,a}^{i} >u}] = g^{-1}((w^{i}_{s,a})^T \beta)
+    $$
+    such that $\beta^*$ is the best fit for the expected value for higher values than $u$ and define $\hat{\eta} := g^{-1} (w_{s,a} \beta^*)$.
+    \item Step 3: Find the MLE for the two probability distributions on the bulk $f_1^{\theta_{s,a}^1}$ and on the tail $f_2^{\theta_{s,a}^2}$:
+    $$
+    l (\theta_{s,a}^1,\theta_{s,a}^2) := \sum_{X_{s,a}^{i} \leq u} \log (f_1^{\theta_{s,a}^1} (X_{s,a}^{i})) +  \sum_{X_{s,a}^{i} > u} ( \log (f_2^{\theta_{s,a}^2} (X_{s,a}^{i})) + \log (1-\hat{\eta})),
+    $$
+    via stochastic gradient descent. Then define
+    $$
+    E_1 := \int x f_1^{\theta_{s,a}^1} (x) dx, \quad E_2 := \int x f_2^{\theta_{s,a}^2} (x) dx 
+    $$
+    \item Step 4: Q-learning Update (This is then actually a n-step Q-learning update)
+$$
+Q_{s,a} (i+1) = (1-\alpha_{s,a}(i)) Q_{s,a}(i) + \alpha_{s,a}(i) (\eta E_1 + (1-\eta) E_2).
+$$
+\end{itemize}
+
+\end{document}

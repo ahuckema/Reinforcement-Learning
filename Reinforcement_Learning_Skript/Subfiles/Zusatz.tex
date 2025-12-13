@@ -1,0 +1,84 @@
+\documentclass[../main.tex]{subfiles}  % verweist auf die Master‑Datei
+\begin{document}
+
+
+\chapter{5 Minuten Über Fraktale der Value function}
+
+
+\defn{$\delta$-Cover}{
+Let $(U_i)_{i \in \mathbb{N}}$ a sequence of sets that have a diameter of at most $\delta>0$, i.e. $|U_i| := \sup \{ \|x-y\| \mid x,y \in U_i  \} \leq \delta$ for all $i \in \mathbb{N}$. For $F \subset \mathbb{R}^N$ we call $(U_i)_{i \in \mathbb{N}}$ $\delta-$cover if $F \subset \bigcup_{i \in \mathbb{N}} U_i$.
+}
+
+\defn{}{
+For any $F \subset \mathbb{R}^N$ and $s \geq 0$ we define
+$$
+\mathcal{H}_\delta^s (F) := \inf \{ \sum_{i \in \mathbb{N}} |U_i|^s \mid F \subset \bigcup_{i \in \mathbb{N}} U_i \}.
+$$
+We call $\mathcal{H}^s (F) := \lim_{\delta \to 0} \mathcal{H}_\delta^s (F)$ the Hausdorff Measure of $F$.
+}
+
+\defn{}{
+For any $F \subset \mathbb{R}^N$, we call 
+$$
+dim_H (F) := \inf \{ s \geq 0 \mid \mathcal{H}^s (F) =0 \} = \sup \{ s \geq 0\mid \mathcal{H}^s (F) = \infty \}
+$$
+its Hausdorff Dimension.
+}
+\pf{ of the result in the definition: Common in Literature
+}
+
+\defn{}{
+we define a function $\eta:\mathbb{R}^d \to \mathbb{R}$ which we call $\alpha-$Hölder continuous at $x \in \mathbb{R}^d$ if
+$$
+\exists C>0 \epsilon >0 \forall y \in B_\epsilon (x) : \quad \|\eta(x) - \eta(y) \| \leq C \|x-y\|^\alpha.
+$$
+}
+It is Lipschitz if $\alpha =1$.
+Consider a deterministic MDM 
+$$
+s_{t+1} = f(s_t,a_t)
+$$
+that is continuous on $\mathcal{A},$ $\mathcal{S} \subseteq \mathbb{R}$ (which are usually compact). Our reward is deterministically defined as $r(s,a) =|s|$ and the policy $\pi^\theta (s) := s \theta$ for $\theta >1$. Define the transition function as
+$$
+f(s,a) = \begin{cases}
+    1 &, a \geq 1\\
+    a &, a \in (0,1) \\
+    -1&,a \leq -1.
+\end{cases}
+$$
+Then the value function started in $1>\delta >0$ with $T_0 (1)$ the first hitting time of state $1$ (because $r_t = |s_t|= \theta^t \delta$ is a non decreasing sequence and stays constant after reaching state 1) satisfies
+$$
+V^{\pi^\theta} (\delta) =\sum_{t=0}^\infty \gamma^t r_t =\sum_{t=0}^\infty \gamma^t (\theta^t \delta \textbf{1}_{t \leq T_0(1)} +\textbf{1}_{t > T_0(1)}) = \sum_{t=0}^{T_0 (1)} (\gamma \theta )^t \delta + \sum_{t=T_0(1)+1}^\infty \gamma^t \geq \sum_{t=T_0(1)+1}^\infty \gamma^t= \frac{\gamma^{T_0 (1)}}{1-\gamma}
+$$
+where $T_0 (1) = 1+ \lfloor \frac{-\log (\delta)}{\log (\theta)} \rfloor$ (Solve $ \theta^t \delta < 1$ and $1\leq \theta^{t+1} \delta$).  Thus the value function is in zero $\frac{-\log (\gamma)}{\log (\theta)}$ continuous:
+\begin{align*}
+| V^{\pi^\theta} (\delta ) - V^{\pi^\theta} (0 ) |  &=V^{\pi^\theta} (\delta ) \geq \frac{\gamma^{1+ \lfloor \frac{-\log (\delta)}{\log (\theta)} \rfloor}}{1-\gamma} \geq \frac{\gamma}{1-\gamma} \gamma^{\frac{-\log (\delta)}{\log (\theta)}} \\
+&= \frac{\gamma}{1-\gamma} e^{\log(\gamma)^{\frac{-\log (\delta)}{\log (\theta)}}} = \frac{\gamma}{1-\gamma} e^{-\log(\gamma)\frac{\log (\delta)}{\log (\theta)}} \\
+&= \frac{\gamma}{1-\gamma} e^{\log(\delta)^{\frac{-\log (\gamma)}{\log (\theta)}}} = \frac{\gamma}{1-\gamma} \delta^{\frac{-\log (\gamma)}{\log (\theta)}}
+\end{align*}
+Finally, in the paper it was shown that $V^{\pi^\theta} (\delta)$ cannot be p-hölder smooth for $p> \frac{-\log (\gamma)}{\log (\theta)}$.
+
+\thm{}{
+An $\alpha$-Hölder continuous function $\eta: \mathbb{R}^k \to \mathbb{R}$ satisfies for
+$$
+Graph(\eta):= \{ (x,\eta(x)) \in \mathbb{R}^{k+1} \mid x \in \mathbb{R}^k \}
+$$
+that $dim_H Graph (\eta) \leq 2-\alpha$.
+}
+\pf{
+Common in Literature.
+}
+
+Thus if we choose $\gamma$ and $\theta$ such that $0<\frac{- \log (\gamma)}{\log (\theta)}<1$ the value function is a fractal in zero .
+
+We have $Y_1,...,Y_n$  iid samples of a random variable $X \sim F$, then the least squares minimizer of linear regression is give by
+$$
+\hat{\beta} = (X^TX)^{-1} Y^T Y = \frac{1}{n} \sum_{i=1}^n Y_i, \quad X \in \mathbb{R}^{n\times 1}
+$$
+i.e. anonlogusly to Monte Carlo. Assume further we want to do regression on a discrete set $\mathcal{A}$ then this is hardly possible, as there are no distances defined. What we can do is do regression on the Psuedo-inverse on $[0,1]$. We define
+$$
+W_p (U,Y) = (\int_0^1 |F^{-1}_Y (\omega) - F_U^{-1} (\omega)|^p d\omega)^{1/p}.
+$$
+Then
+
+\end{document}

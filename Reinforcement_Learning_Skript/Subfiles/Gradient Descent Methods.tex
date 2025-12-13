@@ -1,0 +1,595 @@
+
+\documentclass[../main.tex]{subfiles}  % verweist auf die Master‑Datei
+\begin{document}
+
+\chapter{Gradient Descent Methods}
+Our goal is to do policy gradient methods, i.e. we parametrize the policy $\{\pi^\theta \mid \theta \in \mathbb{R}^d\}$ and define the value function 
+$$
+J(\theta) := \mathbb{E}_\mu^{\pi^\theta}[\sum_{t=0}^\infty \gamma^t R_t]
+$$
+for a fixed initial distribution $\mu$. Finding here an optimal policy for this problem statement is different to our usual way. This is because we defined optimal policies for every starting state action pair $(s,a)$! Here $\mu$ is fixed. Therefore for
+$$
+\theta^* \in
+ \arg \max_{\theta \in \Theta} J(\theta)
+$$
+$\pi^{\theta^*}$ is not an optimal policy!\\
+In this section we focus on gradient descent methods for functions $f: \mathbb{R}^d \to \mathbb{R}$. Remember that the negative gradient is the direction of the steepest descent, i.e.
+$$
+- \frac{1}{\|\nabla f(x)\|} \nabla f(x) \in \arg\min_{\|d\|=1} \underbrace{f^\prime (x) d}_{\text{slope in direction d}} =  \arg\min_{\|d\|=1}\langle f^\prime (x),d \rangle= \arg\min_{\|d\|=1}\sum_{i=1}^n \frac{\partial}{\partial x_i} f(x) \cdot d 
+$$
+This motivates the minimization scheme that goes step by step into the direction of the gradient multiplied by a step size
+$$
+\forall x_0 \in \mathbb{R}^d:\quad  x_{n+1} := x_n - \alpha \nabla f(x_n)
+$$
+Because only first derivatives are involved we call this numerical method first order scheme. The entire theory builds on how to choose the step size, as this is not trivial. A simple example is $f(x) = A \|x\|^2$. For $A=Id$ the iteration scheme can converge in one step if we choose the step size smart
+$$
+\nabla f(x) = 2 x, \text{ then } x_{1} = x_0 - \alpha   2 x_0 =0 \quad \iff \quad \alpha=\frac{1}{2}.
+$$
+If we choose $A$ in such a way that it gets narrow valleys then the convergence is very slow, i.e. increase the values of the entries beside the diagonal. Here is the problem that the function is flat in one direction (in the valleys) and very steep in the other (down the ridge). This is reflected in the ratio of the largest and smallest Eigenvalues of the Hessian $\nabla^2 f(x)$. Thus function with smaller ratios of Eigenvalues are easier to do gradient descent on. We call such functions $L$-smooth. But we will not talk about Eigenvalues but use equivalent definitions that are more intuitive.\\
+We will do some theory in the first section on L-smooth functions. This will not be very important for RL-theory. More important will be later so called $PL$-inequalities.\\
+Note that methods containing the only the first derivative are called first order methods. Second order methods are not desirable, because the size of the Hessian can make so large, that its computation is not feasible.
+
+
+
+\defn{}{
+We call a function $f: \mathbb{R}^d \to \mathbb{R}$ $L$-smooth if it is differentiable and the gradient $\nabla f$ is $L$-continuous, i.e.
+$$
+\forall x,y \in \mathbb{R}^d:\quad \|\nabla f(x) - \nabla f(y)\| \leq L \|x-y\|.
+$$
+}
+The property in this theorem is equivalent to the fact that the Hessian
+$$
+\nabla^2 f(x) \in [-L,L].
+$$
+Thus $L$-smooth functions do not have very strong curvature. Luckily we will later show that most functions for MDPs are $L$-smooth.
+\subsection{Gradient descent for $L$-smooth functions}
+In this section we will show under $L$-smooth functions that the gradient descent scheme if it converges, it will converge to a point that is stationary, i.e. with vanishing gradient. These are not necessarily local or global extreme points, but also saddle points. 
+
+\lem{Descent Lemma}{
+Let $f: \mathbb{R}^d \to \mathbb{R}$ be $L$-smooth with $L>0$ then it holds that
+$$
+\forall x,y \in \mathbb{R}^d:\quad f(x+y) \leq \underbrace{f(x) + y^T \nabla f(x) + \frac{L}{2} \|y\|^2}_{\text{tangent at x plus a quadratic term}}
+$$
+}
+Note that if $L$ decreases then the upper bound decreases, thus making the function smoother. We will later show that gradient descent is faster on smoother functions
+\pf{
+We define $\phi (t) := f(x+ty)$ and applying the chain rule yields
+$$
+\phi ^\prime (t) = y^T \nabla f(x+ty), \quad t \in [0,1].
+$$
+Now with the fundamental theorem of calculus it follows that
+\begin{align*}
+    f(x+y) - f(x) &= \phi(1) - \phi (0) = \int_0^1 \phi^\prime (t) dt\\
+    &= \int_0^1 y^T \nabla f(x+ty) dt\\
+    &= \int_0^1 y^T \nabla f(x+ty) dt + \int_0^1 y^T \nabla f(x) dt - \int_0^1 y^T \nabla f(x) dt \\
+    &= \int_0^1 y^T ( \nabla f(x+ty) -\nabla f(x)  )dt + \int_0^1 y^T \nabla f(x) dt \\
+    &\leq  \int_0^1 \|y\| \| \nabla f(x+ty) -\nabla f(x)  \| dt +  y^T \nabla f(x) \cdot 1 \\
+    &\stackrel{L\text{-smooth}}{\leq}  \int_0^1 \|y\| L \|   ty  \| dt +  y^T \nabla f(x) \\
+    &=   L \|   y  \|^2 \int_0^1  t dt +  y^T \nabla f(x) \\
+    &=  \frac{ L \|   y  \|^2}{2}  +  y^T \nabla f(x) 
+\end{align*}
+Befor L-smootheness we used cauchy schwarz, i.e. $\langle x,y \rangle \leq \|x\| \|y\|$. 
+}
+We can now show that gradient descent converges to a stationary point.
+
+\thm{}{
+Let $f: \mathbb{R}^d \to \mathbb{R}$ be $L$-smooth and define the sequence $(x_k)_{k \in \mathbb{N}}$ as 
+$$
+x_{k+1} := x_k - \bar{\alpha} \nabla f(x_k), \quad \forall x_0 \in \mathbb{R}^d,
+$$
+where the step size is chosen for $\epsilon< \frac{2}{L+1}$ as $\bar{\alpha} \in [\epsilon,\frac{2-\epsilon}{L}]$. It follows that every accumulation point $\bar{x}$ of $(x_k)_{k \in \mathbb{N}}$ is a stationary point of $f$, i.e. $\nabla f(\bar{x})=0$.
+}
+The iteration scheme could also reach no accumulation point. I.e. it only converges to a stationary point, if the iteration reaches an accumulation point.
+
+\pf{
+Since $f$ is assumed to be $L$-smooth it follows that it is also smooth, i.e. for a convergent sequence $(x_n)_{n \in \mathbb{N}}$ with limit $\bar{x}$ it follows that every subsequence $(x_{n_k})_{k \in \mathbb{N}}$ converges to the same limit and also that $\lim_{k \to \infty} f(x_{n_k}) = f(\bar{x})$. Because it is a convergent sequence, it is also a cauchy sequence and satisfies by definition
+$$
+\lim_{k \to \infty} (x_{n_k} -x_{n_{k-1}}) =0
+$$
+which implies that
+$$
+\lim_{k \to \infty} (f (x_{n_k}) -f(x_{n_{k-1}})) \stackrel{MeanValueThm.}{= } \lim_{k \to \infty} \overbrace{\underbrace{f^\prime(c_n)}_{c_n \in (x_{n_k},x_{n_{k-1}})}}^{< \infty} (x_{n_k} -x_{n_{k-1}}) =0
+$$
+We now find a positive lower bound dependend on the norm of the gradient for the difference of one step, i.e. $f(x_k)-f(x_{k+1})$ and can then imply the assertion. We can apply the descent Lemma:
+\begin{align*}
+    f(x_k) - f(x_{k+1}) &=  f(x_k)-f( \underbrace{x_k}_{ x} \underbrace{-\bar{\alpha} \nabla f(x_k)}_{y}  ) \\
+    &\geq -  y^T \nabla f(x) - \frac{L}{2} \|y\|^2 \\
+    &= (\bar{\alpha} \nabla f(x_k))^T \nabla f(x_k) - \frac{L}{2} \|-\bar{\alpha} \nabla f(x_k)\|^2 \\
+    &= \bar{\alpha} \| \nabla f(x_k))\|^2- \frac{L\bar{\alpha}^2}{2} \|\nabla f(x_k)\|^2 \\
+    &= (\bar{\alpha}- \frac{L\bar{\alpha}^2}{2}) \|\nabla f(x_k)\|^2 \\
+\end{align*}
+If we consider $\bar{\alpha} \in [\epsilon,\frac{2-\epsilon}{L}]$ and first plug in the upper bound and then the lower it follows
+\begin{align*}
+   \bar{\alpha} (1- \frac{L\bar{\alpha}}{2}) \|\nabla f(x_k)\|^2  &\geq \bar{\alpha} (1- \frac{L\frac{2-\epsilon}{L}}{2}) \|\nabla f(x_k)\|^2 \\
+   &= \bar{\alpha} (1- \frac{2-\epsilon}{2}) \|\nabla f(x_k)\|^2 \\
+   &= \bar{\alpha} \frac{\epsilon}{2} \|\nabla f(x_k)\|^2 \\
+   &\geq\frac{\epsilon^2}{2} \|\nabla f(x_k)\|^2 
+\end{align*}
+Due to the fact that the lower bound of $f(x_k) - f(x_{k+1})$ is non-negative and the fact that our difference converge to zero, it follows that
+$$
+\lim_{n \to \infty} \|\nabla f(x_k)\|^2  =0\quad  \Rightarrow \quad \lim_{n \to \infty} \|\nabla f(x_k)\|  =0.
+$$
+}
+This theorem is very weak, as there is no statement weather this iteration scheme actually converges and there is no way of knowing if the accumulation point is a minimum or sattle point.
+
+
+\subsection{Gradient descent for $L$-smooth convex functions}
+
+\defn{Convex function}{
+A function $f:\mathbb{R}^d \to \mathbb{R}$ is called convex if
+$$
+\forall x,y \in \mathbb{R}^d:\quad  f(y) \geq f(x) + (y-x)^T \nabla f(x)
+$$
+}
+Examples for convex functions are linear and quadratic functions. There is at every point a tangent plane that lies below the graph of $f$. Convex functions do not necessarily have to have a global minimum (linear functions), but we will assume this to be the case. We will always assume that a global minimum exists.
+\rmkb{
+One can show that all local minima of convex functions must be global minima and all global minima have the same height.
+}
+We will denote by $f_*$ the height of all global minima, i.e.
+$$
+f_* := f(x^*), \quad x^* \in \argmin_{x \in \mathbb{R}^d} f(x).
+$$
+In the following analysis we will consider an error function $e: \mathbb{R}^d \to \mathbb{R}$ with the property $e(x) \geq 0$ for all $x \in \mathbb{R}^d$ and $e(x^*)=0$. One typically chooses $e(x) = f(x) - f_*$.\\
+Recall that we defined convergence to be "linear" (actually exponentially fast) if
+$$
+\exists c \in (0,1):\quad e(x_{k+1}) \leq c e(x_k).
+$$
+We call it sublinear if it is slower. We will see that first order methods will be sublinear. This will be shown here
+\thm{}{
+Let $f: \mathbb{R}^d \to \mathbb{R}$ be a convex $L-$smooth function and let $(x_k)_{k \in \mathbb{N}}$ be a seqence defined as
+$$
+x_{k+1} := x_k - \bar{\alpha} \nabla f(x_k), \quad x_0 \in \mathbb{R}^d,
+$$
+with $\bar{\alpha} \leq \frac{1}{L}$. Moreover assume that the set of global minimizers of $f$ is non-empty. Then the sequence $(f(x_k))_{k \in \mathbb{N}}$ converges to $f_*$ with speed
+$$
+ \exists c>0:\quad  e(x_k) := f(x_k) - f_* \leq \frac{c}{k+1},\quad k \in \mathbb{N}
+$$
+and $f_* \in \min_{x \in \mathbb{R}^d} f(x)$. 
+}
+Note as we assume there to be no unique global minimum, we only prove convergence to $f_*$.
+\pf{
+Using the descent Lemma with $y=x_{k+1}$ and $x=x_k$ we get
+\begin{align*}
+    f(x_{k+1}) &= f(\underbrace{x_k}_{x} \underbrace{- \bar{\alpha} \nabla f(x_k)}_{y}) \leq f(x_k) - (\bar{\alpha} \nabla f(x_k))^T \nabla f(x_k)+ \frac{L}{2} \|- \bar{\alpha} \nabla f(x_k)\|^2 \\
+    &= f(x_k) -\bar{\alpha}  \|  \nabla f(x_k)\|^2 + \frac{L\bar{\alpha}^2}{2} \|  \nabla f(x_k)\|^2 \\
+    &= f(x_k) +(\frac{L\bar{\alpha}^2}{2}-\bar{\alpha}) \|  \nabla f(x_k)\|^2
+\end{align*}
+Since we chose $\bar{\alpha}<\frac{1}{L}$ leads to $\frac{L\bar{\alpha}^2}{2}-\bar{\alpha} = \bar{\alpha} (\frac{L\bar{\alpha}}{2}-1) \leq \frac{1}{L} (\frac{1}{2} -1)<0$. Because the norm is non negative it follows that the sequence $(f(x_k))_{k \in \mathbb{N}}$ is decreasing. Let $x_*$ be global minimum of $f$ then using convexity it holds that
+$$
+\forall k \in \mathbb{N}:\quad  \underbrace{f(x_k) + (x_* -x_k)^T \nabla f(x_k)}_{\text{tangent at }x_*} \leq f(x_*)
+$$
+This is saying that the tangent at the minimum of $f$ is below the graph of $f$. If we plug in an equivalalent inequality as the above $f(x_k) \leq f(x_*) - (x_* -x_k)^T \nabla f(x_k)$ and then using the polarisation formula $- \langle a,b \rangle = \frac{1}{2} \|a\|^2+ \frac{1}{2} \|b\|^2 - \frac{1}{2} \|a+b\|^2$ , we get that
+\begin{align*}
+f(x_{k+1})&\leq f(x_k)+\bar{\alpha} (\frac{L\bar{\alpha}}{2}-1) \|  \nabla f(x_k)\|^2 \\
+& \leq f(x_*) - \frac{\bar{\alpha}}{\bar{\alpha}} (x_* -x_k)^T \nabla f(x_k) +\bar{\alpha} (\frac{L\bar{\alpha}}{2}-1) \|  \nabla f(x_k)\|^2 \\
+& = f(x_*) - \frac{1}{\bar{\alpha}}\bar{\alpha} \langle  (x_* -x_k),\nabla f(x_k) \rangle +\bar{\alpha} (\frac{L\bar{\alpha}}{2}-1) \|  \nabla f(x_k)\|^2 \\
+& = f(x_*) - \frac{1}{\bar{\alpha}} (\frac{1}{2} \|x_* -x_k\|^2 + \frac{1}{2} \| \bar{\alpha} \nabla f(x_k)\|^2 - \frac{1}{2} \|x_* -x_k +\bar{\alpha} \nabla f(x_k) \|^2  )+\bar{\alpha} (\frac{L\bar{\alpha}}{2}-1) \|  \nabla f(x_k)\|^2 \\
+& = f(x_*) - \frac{1}{\bar{\alpha}} (\frac{1}{2} \|x_* -x_k\|^2 + \frac{1}{2} \| \bar{\alpha} \nabla f(x_k)\|^2 - \frac{1}{2} \|x_* -x_{k+1} \|^2 ) +\bar{\alpha} (\frac{L\bar{\alpha}}{2}-1) \|  \nabla f(x_k)\|^2 \\
+& = f(x_*) - \frac{1}{\bar{\alpha}} (\frac{1}{2} \|x_* -x_k\|^2 - \frac{1}{2} \|x_* -x_{k+1} \|^2 ) +\bar{\alpha} \underbrace{(\frac{L\bar{\alpha}}{2}-1- \frac{1}{2})}_{\leq 0; \bar{\alpha}\leq \frac{1}{L}} \|  \nabla f(x_k)\|^2 \\
+& \leq f(x_*) - \frac{1}{2\bar{\alpha}} ( \|x_* -x_k\|^2 -  \|x_* -x_{k+1} \|^2 ) 
+\end{align*}
+The above is equivalent to
+$$
+f(x_{k+1}) -  f(x_*) \leq- \frac{1}{2\bar{\alpha}} ( \|x_* -x_k\|^2 -  \|x_* -x_{k+1} \|^2 ) \quad\quad (*)
+$$
+Now using that $(f(x_k))_{k \in \mathbb{N}}$ is a decreasing sequence it follows that
+$$
+\sum_{k=0}^N f(x_{k+1}) \geq \sum_{k=0}^N f(x_{N+1}) = (N+1) f(x_{N+1}),
+$$
+which implies that
+\begin{align*}
+    f(x_{N+1}) - f(x_*) &\stackrel{above}{\leq} \frac{1}{N+1} \sum_{k=0}^N (f(x_{k+1})-f(x_*)) \\
+    &\stackrel{(*)}{\leq}\frac{1}{N+1} \sum_{k=0}^N ( \frac{1}{2\bar{\alpha}} ( \|x_* -x_k\|^2 -  \|x_* -x_{k+1} \|^2 ))\\
+    &= \frac{1}{2 \bar{\alpha}(N+1)} \sum_{k=0}^N (  \|x_* -x_k\|^2 -  \|x_* -x_{k+1} \|^2 ) \\
+    &\stackrel{TelescopingSum}{=} \frac{1}{2 \bar{\alpha}(N+1)}  (  \|x_* -x_0\|^2 -  \|x_* -x_{N+1} \|^2 )\\
+    & \leq \frac{1}{2 \bar{\alpha}(N+1)}   \|x_* -x_0\|^2 =: \frac{c}{N+1}
+\end{align*}
+}
+This is sublinear convergence, because "linear" convergence satisfies
+$$
+e(x_k) \leq c e(x_{k-1}) \leq ... \leq c^k e(x_0)
+$$
+Thus $e(x_k) \in \mathcal{O}(c^k) = \mathcal{O}(e^{k\log(c)}) $, but in the case of the theorem we only have  $(e_k) \in \mathcal{O}(\frac{1}{k+1})$.\\
+In order to unsure that our convex functions have a unique minimum we define a class of functions that have to "bend" in all coordinates, i.e. being stronger convex than linear.
+\defn{$\mu$-Convexity}{
+We call a function $f: \mathbb{R}^d \to \mathbb{R}$ $\mu$-strongly convex if
+$$
+f(y) \geq \underbrace{f(x) + (y-x)^T \nabla f(x) }_{\text{tangent}}+ \frac{\mu}{2} \|y-x\|^2
+$$
+for all $x,y \in \mathbb{R}^d$.
+}
+
+\rmkb{
+To show: Every strongly convex function has a unique global minimum.
+}
+Now that we tightend the assumptions on the function $f$, we can show in the following that we can improve the convergence from sub linear to linear!
+\thm{}{
+Let $f: \mathbb{R}^d \to \mathbb{R}$ be $\mu-$strongly convex for some $\mu>0$ and let it be $L$-smooth. Further, let the sequence $(x_k)_{k \in \mathbb{N}}$ be generated by
+$$
+x_{k+1} := x_k - \bar{\alpha} \nabla f(x_k), \quad x_0 \in \mathbb{R}^d
+$$
+with $\bar{\alpha}< \frac{1}{L}$. Then the sequence $(x_k)_{k \in \mathbb{N}}$ convergences linearly, i.e.
+$$
+\exists c \in (0,1): \quad e(x_k) := \|x_k -x_*\| \leq c^k \|x_0-x_*\|, \quad k \in \mathbb{N},
+$$
+where $x_* \in \mathbb{R}^d$ is the unique global minimum of $f$ and the constant can be chosen as $c= \sqrt{\frac{1}{1+ \mu \bar{\alpha}}}$.
+}
+\pf{
+Let $x_* \in \mathbb{R}^d$ be the unique global minimum of $f$, i.e. among other things it holds that $\nabla f(x_*)=0$. Because $f$ is $\mu-$strongly convex it is also convex and thus get the result from the last theorem that
+\begin{equation}
+\label{ConvexResultFromBefore}
+f(x_{k+1})-f(x_*) \leq \frac{1}{2 \bar{\alpha}} (\|x_k-x_*\|^2 - \|x_{k+1}-x_*\|^2).
+\end{equation}
+Now using the $\mu$-strong convexity we also get that
+\begin{equation}
+\label{Mu Strongly Convex}
+\frac{\mu}{2} \|x_{k+1} -x_*\|^2 = \underbrace{\nabla f(x_*)^T}_{=0} (x_{k+1}-x_*) + \frac{\mu}{2} \|x_{k+1} -x_*\|^2 \leq f(x_{k+1})-f(x_*).
+\end{equation}
+Together this leads to 
+\begin{align*}
+(\frac{\mu}{2}+ \frac{1}{2 \bar{\alpha}}) \|x_{k+1}-x_*\|^2 & \stackrel{\ref{Mu Strongly Convex}}{\leq}  f(x_{k+1})-f(x_*) + \frac{1}{2 \bar{\alpha}} \|x_{k+1}-x_*\|^2 \\
+&\stackrel{\ref{ConvexResultFromBefore}}{\leq}   \frac{1}{2 \bar{\alpha}} (\|x_k-x_*\|^2 - \|x_{k+1}-x_*\|^2) + \frac{1}{2 \bar{\alpha}} \|x_{k+1}-x_*\|^2 \\
+&= \frac{1}{2 \bar{\alpha}} \|x_{k}-x_*\|^2 .
+\end{align*}
+Thus the assertion follows with 
+$$
+c= \sqrt{\frac{1}{2 \bar{\alpha}(\frac{\mu}{2}+ \frac{1}{2 \bar{\alpha}}) }} =\sqrt{\frac{1}{ \bar{\alpha} \mu +1}}
+$$
+and if and only if $c \in (0,1)$.
+}
+
+Due to 
+$$
+\|x_k-x_*\| \leq (\sqrt{\frac{1}{ \frac{\mu}{L} +1}})^k \|x_0-x_*\|  \leq  (\sqrt{\frac{1}{ \bar{\alpha} \mu +1}})^k \|x_0-x_*\| =  c^k \|x_0-x_*\| = 
+$$
+Thus if we choose $\bar{\alpha}$ close to $\frac{1}{L}$ we get faster convergence. Further, the speed of convergence is even better when $L$ is small, which in turn makes the function $f$ smoother. Finally, the factor $\mu$ also determines the speed of convergence. The larger $\mu$ is, the more convex the function is. This also increases the speed. Thus the factor
+$$
+\sqrt{\frac{1}{ \frac{\mu}{L} +1}}
+$$
+completely determines the theoretically possible speed of convergence.
+\rmkb{
+Show that for the quadratic function $f(x) = x^T A x$ the specturm of $A$ describes $L$ and $\mu$. $L$ is two times the largest singular value und $\mu$ is the two times smallest singular value. Thus the convergence is fast, if all Eigenvalues are similar. If the singular values differ a lot, we have the situation of narrow valleys, where the curvature is strong in one direction but not so strong in another.
+}
+
+\subsection{Gradient descent for $L$-smooth functions with PL inequality}
+In most application for policy gradient method, the assumption of convexity is not fulfilled. The following definition finds a way to relax this assumption.\\
+The estimates of the norm of the gradient as in the following definition are called gradient domination inequalities.
+\defn{PL-Inequality}{
+A function $f : \mathbb{R}^d \to \mathbb{R}$ satisfies the strong PL inequality if 
+$$
+\exists C>0 \forall x \in \mathbb{R}^d: \quad \|\nabla f(x)\|^2 \geq C (f(x)-f_*), 
+$$
+and $f_* := \min_{x \in \mathbb{R}^d} f(x)> - \infty.$
+}
+In fact, the PL inequality was constructed in such a way, that we get the convergence of gradient descent really easily.
+\thm{}{
+Let $f: \mathbb{R}^d \to \mathbb{R}$ be L-smooth and satisfies the PL inequality for $C=2r$, where $r \in (0,L)$. Then the sequence $(x_k)_{k \in \mathbb{N}}$ generated by
+$$
+x_{k+1} =x_k - \bar{\alpha } \nabla f(x_k),\quad x_0 \in \mathbb{R}^d,
+$$
+with $\bar{\alpha}= \frac{1}{L}$, then the sequence $(f(x_k))_{k \in \mathbb{N}}$ converges linearly to $f_*$, i.e.
+$$
+e(x_k) := f(x_k) -f_* \leq c^k (f(x_0) -f_*), \quad c=1-\frac{r}{L} \in (0,1).
+$$
+}
+\pf{
+Using the descent Lemma we get that
+\begin{align*}
+f(x_{k+1}) &\leq f(x_k) - \bar{\alpha} (1-\frac{L \bar{\alpha}}{2}) \|\nabla f(x_k)\|^2 \stackrel{\bar{\alpha}=\frac{1}{L}}{= }f(x_k) - \frac{1}{2L}   \|\nabla f(x_k)\|^2 \\
+&\stackrel{PL-Inequality}{\leq } f(x_k) - \frac{1}{2L}   2r (f(x_k)-f_*) \\
+&=  f(x_k) - \frac{r}{L}    (f(x_k)-f_*) .
+\end{align*}
+Now subtracting $f_*$ from both sides yields
+$$
+f(x_{k+1}) - f_* \leq f(x_k) - \frac{r}{L}    (f(x_k)-f_*) -f_* = (1-\frac{r}{L}) (f(x_k)-f_*).
+$$
+The claim follows by induction.
+}
+The idea behind the PL inequality is that it ensures that the gradient does not vanish as long as the gradient descent algotithm has not reached $f_*$. It further implies that that a small gradient norm at $x$ implies that there is a small difference of $f(x)$ and $f_*$.
+\rmkb{
+Prove that $\mu-$strong covnexity and $L$-smoothness imply the PL-inequality. What is C?
+}
+If we relax the condition of the PL inequlity even further, we get sublinear convergence:
+\defn{Weak PL inequality}{
+A function $f: \mathbb{R}^d \to \mathbb{R}$ satisfies the weak PL inequality if
+$$
+\exists C>0\forall x \in \mathbb{R}^d: \quad \|\nabla f(x)\| \geq C (f(x)-f_*), 
+$$
+and $f_* := \min_{x \in \mathbb{R}^d} f(x)> - \infty.$
+}
+\rmkb{
+We will later see that for a specific parametrisation of policies the weak PL inequality holds for the parametrised value function!
+}
+\thm{}{
+Let $f: \mathbb{R}^d \to \mathbb{R}$ be L-smooth and satisfies the PL weak inequality for $C=2r$, where $f \in (0,L)$. Then the sequence $(x_k)_{k \in \mathbb{N}}$ generated by
+$$
+x_{k+1} =x_k - \bar{\alpha } \nabla f(x_k),\quad x_0 \in \mathbb{R}^d,
+$$
+with $\bar{\alpha}= \frac{1}{L}$, then the sequence $(f(x_k))_{k \in \mathbb{N}}$ converges sub-linearly to $f_*$, i.e.
+$$
+e(x_k) := f(x_k) -f_* \leq \frac{L}{2r^2 (k+1)}.
+$$
+}
+\pf{
+As in the previous proof using the descent Lemma with L-smoothness we get that
+$$
+f(x_{k+1}) \leq f(x_k) - \frac{1}{2L} \|\nabla f(x_k)\|^2.
+$$
+Now applying the weak PL-inequality for the gradient yields
+\begin{equation}
+\label{Pl-applied to L-Smoothness}
+f(x_{k+1}) \leq f(x_k) - \frac{1}{2L} 4r^2 (f(x_k) -f_*)^2.
+\end{equation}
+Subtracting on both sides with $f_*$ leads to
+$$
+e(x_{k+1})= f(x_{k+1}) -f_* \stackrel{\ref{Pl-applied to L-Smoothness}}{\leq} f(x_k) - \frac{1}{L} 2r^2 (f(x_k) -f_*)^2 -f_* = e(x_k)- \frac{1}{L} 2r^2 e(x_k)^2  = \left(1-  \underbrace{\frac{1}{L} 2r^2}_{=:q} e(x_k)\right) e(x_k)
+$$
+To show: Any positive sequence $(a_n)_{n \in \mathbb{N}}$ with $a_n \in [0,\frac{1}{q}]$ for some $q>0$ that satisfies the diminishing contraction:
+$$
+\forall n \geq 0: \quad 0 \leq a_{n+1} \leq (1-q a_n)a_n
+$$
+converges to zero with convergence rate
+$$
+a_n \leq \frac{1}{nq + \frac{1}{a_0}} \stackrel{\text{Def. of }a_n}{\leq} \frac{1}{(n+1)q}.
+$$
+We only need to show the first inequality.\\
+We reformulate the definied contraction
+$$
+a_{n+1} \leq (1-q a_n)a_n \quad \iff \quad a_{n+1} + q a_n^2 \leq a_n
+$$
+and divide by $a_n a_{n+1}$ and obtaining
+$$
+\frac{1}{a_{n+1}} \leq \frac{1}{a_n} +q \underbrace{\frac{a_n}{a_{n+1}}}_{\geq 1, \text{because } \frac{a_{n+1}}{a_n} \leq (1-qa_n) \leq 1-0} \leq \frac{1}{a_n} +q.
+$$
+Now using the telescoping sum leads to
+$$
+\frac{1}{a_n} -\frac{1}{a_0} = \sum_{k=0}^{n-1} (\frac{1}{a_{k+1}} - \frac{1}{a_k}) \geq \sum_{k=0}^{n-1} q = nq.
+$$
+We can now rewrite this as
+$$
+a_n \leq \frac{1}{nq+ \frac{1}{a_0}}.
+$$
+All we need to do now is to show that our sequence $e(x_k) \in [0,\frac{1}{2r^2/L}]$. Positivity is trivial. It remains to show that $e(x_k) \leq \frac{L}{2r^2}$ for all $k \in \mathbb{N}$.\\
+In the first part of this proof we got the result that 
+$$
+f_* \leq f(x_{k+1}) \leq f(x_k) - \frac{1}{2L} \|\nabla f(x_k)\|^2
+$$
+which implies that
+$$
+f_* - f(x_k) \leq - \frac{1}{2L} \|\nabla f(x_k)\|^2 \quad \iff \quad e(x_k) \geq \frac{1}{2L} \|\nabla f(x_k)\|^2 \geq \frac{1}{2L}4r^2 e(x_k)^2
+$$
+which is equivalent to
+$$
+\frac{1}{e(x_k)} \geq \frac{2r^2}{L} \quad \iff \quad e(x_k) \leq \frac{L}{2r^2}.
+$$
+}
+
+There are $L$-smooth functions that are $L-$smooth but are not convex.
+\rmkb{
+Show that the function $f(x) = x^2 + 3 \sin (x)^2$ satisfies the weak PL inequality.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{Pictures/PL-Inequality.png}
+    \caption{Non Convex function that satisfies the PL-inequality}
+    \label{fig: Map}
+\end{figure}
+This plot can help to find the parameter $r$ of the PL condition. This is due to the fact that the condition
+$$
+\| \nabla f(x) \| \geq 2r (f(x)-f_*)
+$$
+gives a lower bound of the slope in dependence of the $L$-smoothness point wise, i.e. f can fall/increase faster than that lower bound. If $f(x_k)$ is closer to $f_*$ then this lower bound decreases. 
+}
+
+\subsection{Gradient descent with diminishing step-sizes}
+
+Typically the $L$-smoothness parameter is unknow. Thus we cannot choose the step size as $\bar{\alpha} = \frac{1}{L}$ or smaller, because we do not know it. Thus we want to choose a step size, that diminishes, such that it will be eventually smaller than $\frac{1}{L}$, but not too fast such that the sequence will stop to early.
+\thm{}{
+Let $f: \mathbb{R}^d \to \mathbb{R}$ be $L$-smooth and the sequence $(x_k)_{k \in \mathbb{N}}$ defined by
+$$
+x_{k+1} := x_k - \alpha_k \nabla f(x_k), \quad x_0 \in \mathbb{R}^d,
+$$
+with non-negative step-size sequence $(\alpha_k)_{k \in \mathbb{N}}$ that satisfies
+$$
+\lim_{k \to \infty} \alpha_k =0 \quad \text{and} \quad \sum_{k=0}^\infty \alpha_k =\infty.
+$$
+Then the sequence $(f(x_k))_{k \in \mathbb{N}}$ satisfies
+$$
+\lim_{k \to \infty} f(x_k) = - \infty \quad \text{ or } \quad \lim_{k \to \infty} \nabla f(x_k) =0.
+$$
+Moreover it holds that every accumulation point $\lim_{k \to \infty} x_k =\bar{x}$ is a stationary point of $f$, i.e. $\nabla f(\bar{x})=0$.
+}
+\pf{
+Again using the descent Lemma we obtain 
+$$
+f(x_{k+1}) \leq f(x_k) + (\frac{L \alpha_k}{2}-1) \|\nabla f(x_k)\|^2.
+$$
+Since the sequence $\lim_{k \to \infty} a_k =0$ there exsists a $k_0 \in \mathbb{N}$ such that
+$$
+\forall k \geq k_0: \quad f(x_{k+1}) \leq f(x_k) + \underbrace{(\frac{L \alpha_k}{2}-1)}_{\leq 0} \|\nabla f(x_k)\|^2.
+$$
+i.e. the sequence $(f(x_k))_{k \geq k_0}$ is decreasing. Therefore we have two cases:
+$$
+\lim_{k \to \infty} f(x_k) = \begin{cases}
+    M \in \mathbb{R} \\
+    - \infty
+\end{cases}
+$$
+Case 1: $\lim_{k \to \infty} f(x_k) =M$\\
+It holds that
+$$
+\forall K > k_0: \quad \sum_{k=k_0}^K \frac{\alpha_k}{2} \|\nabla f(x_k)\|^2 \stackrel{above}{\leq} \sum_{k=k_0}^K   (f(x_k)-f(x_{k+1})) \stackrel{\text{telescoping sum}}{=} f(x_{k_0}) - f(x_K)
+$$
+If we let $K \to \infty$ we get that
+$$
+\sum_{k=k_0}^\infty \frac{\alpha_k}{2} \|\nabla f(x_k)\|^2 \leq f(x_{k_0})-M< \infty.
+$$
+Since we required the step size to satisfy $\sum_{k=0}^\infty \alpha_k =\infty$ it follows that
+$$
+\liminf_{k \to \infty} \|\nabla f(x_k)\|=0
+$$
+In order to prove that the limit goes to zero of the above we only need to show that the limsup has the same limit, i.e.
+$$
+\limsup_{k \to \infty} \|\nabla f(x_k)\|=0.
+$$
+Suppose that $\exists \epsilon>0$ such that $\limsup_{k \to \infty} \|\nabla f(x_k)\|\geq \epsilon.$ Further, consider two sub-sequences $(m_k)_{j \in \mathbb{N}}$ and $(n_k)_{j \in \mathbb{N}}$, that satisfy 
+$$
+\forall j \in \mathbb{N}: \quad m_j < n_j < m_{j+1}
+$$
+and when the sequence of $(\|\nabla f(x_k)\|)_{k \in \mathbb{N}}$ is for $m_j \leq k < n_j$, i.e. in the index between the two subsequnces the $j^{th}$ time, then it satisfies
+$$
+\frac{\epsilon}{3} < \|\nabla f(x_k)\|, \quad m_j \leq k < n_j
+$$
+and if this sequence satisfies in the indices that $m_{j+1} \leq k < n_{1}$ ,i.e. the index being between the two subsequences for the $j+1^{th}$ time then is satsifies
+$$
+\frac{\epsilon}{3} \geq \|\nabla f(x_k)\|, \quad  n_j \leq k < m_{j+1}.
+$$
+These sequences exists, due to the fact that only $\liminf_{k \to \infty} \|\nabla f(x_k)\|=0$ and the limsup has to be larger. Now choose $\bar{j} \in \mathbb{N}$ sufficiently large such that
+$$
+\sum_{k=m_{\bar{j}}}^\infty \alpha \|\nabla f(x_k)\|^2 \leq \frac{\epsilon^2}{9L}.
+$$
+Now we can use $L$-smoothness for all $j \geq \bar{j}$ and $m_j \leq m \leq n_j -1$ such that we are in the area where $m_j \leq k < n_j$:
+\begin{align*}
+    \|\nabla f(x_{n_j}) - \nabla f(x_m)\| & \stackrel{\text{telescoping Sum}}{=} \|\nabla \sum_{k=m}^{n_j-1} f(x_{k+1}) - \nabla f(x_k)\| \\
+    &\leq \sum_{k=m}^{n_j-1} \|\nabla  f(x_{k+1}) - \nabla f(x_k)\| \\
+     &\leq L \sum_{k=m}^{n_j-1} \| x_{k+1} -  x_k\| \\
+     &\leq \frac{3 \epsilon}{3 \epsilon}L \sum_{k=m}^{n_j-1} \| x_k + \alpha_k \nabla f(x_k) -  x_k\| \\
+      &\leq \frac{3 }{\epsilon}L \sum_{k=m}^{n_j-1} \frac{\epsilon}{3}\alpha_k \|   \nabla f(x_k) \| \\
+      &\leq \frac{3 }{\epsilon}L \sum_{k=m}^{n_j-1} \alpha_k \|   \nabla f(x_k) \|^2 \\
+      &= L\frac{3}{\epsilon} \frac{\epsilon^2}{9L} = \epsilon/3
+\end{align*}
+Still using this $m$ we het that
+$$
+\|\nabla f(x_m)\| \leq \|\nabla f(x_{n_j})\| +\|\nabla f(x_{n_j}) -\nabla f(x_m)\| \stackrel{above}{\leq} |\nabla f(x_{n_j})\|+ \frac{\epsilon}{3} \leq \frac{2\epsilon}{3}.
+$$
+This implies that $\forall m \geq m_{\bar{j}}$ it holds that $\|\nabla f(x_m)\| \leq \frac{2 \epsilon}{3}$ ???!!! This is a contradiction to $\limsup_{k \to \infty} \|\nabla f(x_k)\| \geq \epsilon$. Therefore
+$$
+\limsup_{k \to \infty} \|\nabla f(x_k)\|=\liminf_{k \to \infty} \|\nabla f(x_k)\|=\lim_{k \to \infty} \|\nabla f(x_k)\|=0.
+$$
+Finally, for a accumulation point $\bar{x}$ of $(x_k)_{k \in \mathbb{N}}$ it holds that
+$$
+\nabla f(\bar{x}) = \lim_{k \to \infty} \nabla f(x_k) =0
+$$
+because $(f(x_k))_{k \geq k_0}$ is decreasing.
+}
+
+Choosing the step size right is the essential thing in this approach! Consider $f(x)= \|x\|^2$, then $\nabla f(x,y) = (2x,2y)$, i.e. if we choose the step size to be $\alpha = \frac{1}{L}= \frac{1}{2}$, then we converge in just one step. If we choose it smaller, we need more steps. This can get arbitrarly bad, if the step size is wrong!
+
+BILD???
+
+\subsection{Stochastic gradient descent}
+Let $(\Omega, \mathcal{A},\mathbb{P})$ be the underlying probability space and $Z: \Omega \times \mathbb{R}^d \to \mathbb{R}^p$ be a random variable for every $x \in \mathbb{R}$ with distribution $\mu_x$ on this probability space. We define the cost function
+$$
+F: \mathbb{R}^d \to \mathbb{R}, \quad x \mapsto F(x):= \mathbb{E}_{Z \sim \mu_x} [f(x,Z)] = \int_{\mathbb{R}^p} f(x,z)
+ \mu_x (dz)$$
+ where $f: \mathbb{R}^d \times \mathbb{R}^p \to \mathbb{R}$. We now want to optimize the 
+ $$
+ \min_{x \in \mathbb{R}^d} F(x).
+ $$
+ Them method of getting a sample $Z \sim \mu_x$ is often called oracle. We assume that we can repeatedly ask the oracle for samples. Here are standard assumptions that one upholds
+ \begin{itemize}
+     \item The function $f: \mathbb{R}^d \times \mathbb{R}^p \to \mathbb{R}$ is $\mathcal{B}(\mathbb{R}^d) \otimes \mathcal{B}(\mathbb{R}^p)- \mathcal{B}(\mathbb{R})$ measurable.
+     \item For every $z \in \mathbb{R}^p$ the function $x \mapsto f(x,z)$ is vontinuously differentiable
+     \item For every $x \in \mathbb{R}^d$ it holds that
+     $$
+     \mathbb{E}_{Z \sim \mu_x} [|f(x,Z)| + \|\nabla_x f(x,Z)\| ]< \infty. 
+     $$
+ \end{itemize}
+
+\begin{algorithm}[H]
+\caption{Plain vanilla stochastic gradient descent method (SGD)}
+\SetKwInOut{Data}{Data}
+\SetKwInOut{Result}{Result}
+
+\Data{Initial random variable $X_0 : \Omega \to \mathbb{R}^d$}
+\Result{Approximation of a stationary point}
+
+Set $k = 0$;\\
+\While{not converged}{
+    Determine $\alpha_k$;\\
+    Sample $Z_{k+1}$ from $\mu_{X_k}$;\\
+    Set $X_{k+1} = X_k - \alpha_k\,\nabla_x f(X_k, Z_{k+1})$;\\
+    $k \gets k + 1$;\\
+}
+\end{algorithm}
+
+
+We can now rewrite the iteration scheme as
+$$
+X_{k+1} = X_k - \alpha_k \nabla_x f(X_{k},Z_{k+1}) =  X_k - \alpha_k (\nabla F(x)+  \underbrace{\nabla_x f(X_{k},Z_{k+1}) - \nabla F(x)}_{=:\epsilon_k} ) =  X_k - \alpha_k (\nabla F(x)+  \epsilon_k )
+$$
+which looks exactly as our stochastic approximation scheme with unbiased error $\epsilon_k$. Thus this iteration scheme is ought to converge to zero if the error term of $\nabla F(x)$ is sufficiently well behaved and we have some assumptions on the step size.\\
+We already had a theorem directly after the descent Lemma where we had a similiar iteration scheme but only for a deterministic sequence. The following will expand this.\\
+Further, we do not have strong assumptions of $F$ in the following, thus the convergence is weak. There are also theorems, that do SGD for stronger assumptions on $F$ and thus get better convergence results.\\
+Important point: Becuase the errors are only bounded, but to not tend to zero, the step size has to go to zero to ensure stability when the fixed point is reached.
+\thm{SGD almoust sure convergence for $L$-smooth functions}{
+Let $F: \mathbb{R}^d \to \mathbb{R}$ be $L$-smooth and $F_* := \inf_{x \in \mathbb{R}^d} F(x) > -\infty$ and satisfying
+$$
+\mathbb{E}_{Z \sim \mu_x} [\| \nabla_x f(x,Z) - \mathbb{E}[\nabla_x f(x,Z)] \|^2] \leq c (1+ F(x) -F_*).
+$$
+Suppose that the step sizes $(\alpha_k)_{k \in \mathbb{N}}$ are non negative and either deterministic or adapted to the SGD scheme and satisfying the Robbins-Monro conditions
+$$
+\sum_{k=0}^\infty \alpha_k = \infty \quad \text{and}\quad \sum_{k=0}^\infty \alpha_k^2 < \infty \quad a.s.
+$$
+Moreover, let $X_0$ be a randum variable that satsifies $\mathbb{E}[F(X_0)]< \infty$ and 
+$$
+X_{k+1} := X_k - \alpha_k \nabla_x f(X_k,Z_{k+1}), \quad Z_{k+1} \sim \mu_{X_k}.
+$$
+Then 
+$$
+\lim_{k \to \infty} F(X_k) = F_\infty < \infty \quad a.s.
+$$
+and
+$$
+\lim_{k \to \infty} \|F(X_k)\|^2 = 0 \quad a.s.
+$$
+}
+\pf{
+We assume that we can interchange gradient and the expectation (DCT):
+$$
+\mathbb{E}_{Z \sim \mu_x} [\nabla_x f(x,Z)] = \nabla_x \mathbb{E}_{Z \sim \mu_x} [ f(x,Z)] =\nabla_x F(x).
+$$
+Define the natural filtration $\mathcal{F}:= (\mathcal{F}_k)_{k \in \mathbb{N}}$ trough $\mathcal{F}_k = \sigma (X_m , m\leq k) = \sigma (X_0,Z_m, m\leq k)$ and note that $(\alpha_k)_{k \in \mathbb{N}}$ is $\mathcal{F}$-adapted by construction??? Now using the descent Lemma and the polatisation formula $\langle x,y \rangle = \frac{1}{2} (\|x\|^2+ \|y\|^2+ \|x-y\|^2)$ we get pathwise that
+\begin{align*}
+    F(X_{k+1}) &= F(X_k - \alpha_k \nabla_x f(X_k,Z_{k+1}) ) \\
+    &\stackrel{\text{Descent Lemma}}{\leq} F(X_k) - \alpha_k \langle \nabla_x f(X_k,Z_{k+1}),\nabla_x F(X_k) \rangle + \alpha_k^2 \frac{L}{2} \|\nabla_x f(X_k,Z_{k+1}) \|^2 \\
+    & = F(X_k) - \frac{\alpha_k}{2} \left( \|\nabla_x F(X_k)\|^2 + \|\nabla_x f(X_k,Z_{k+1})\|^2 + \|\nabla_x F(X_k)- \nabla_x f(X_k,Z_{k+1}) \|^2  \right) + \alpha_k^2 \frac{L}{2} \|\nabla_x f(X_k,Z_{k+1}) \|^2  \\
+    &= F(X_k) - \frac{\alpha_k}{2} \left( \|\nabla_x F(X_k)\|^2  + \| \epsilon_k \|^2  \right) + (\alpha_k^2 \frac{L}{2}- \frac{\alpha_k}{2}) \|\nabla_x f(X_k,Z_{k+1}) \|^2  ??? \\
+    &= F(X_k) - \frac{\alpha_k}{2} \left( \|\nabla_x F(X_k)\|^2  + \| \epsilon_k \|^2  \right) + \frac{\alpha_k}{2} (\alpha_k L- 1) \|\nabla_x f(X_k,Z_{k+1}) \|^2  \\
+    &=???\\
+    &= F(X_k) +( \frac{\alpha_k^2 L}{2} - \alpha_k) ( \langle \nabla F(X_k),\nabla_x f(X_k,Z_{k+1}) \rangle - \|\nabla_x f(X_k,Z_{k+1})\|^2 - \|\nabla F(X_k)\|^2 ) + (\alpha_k- \frac{\alpha_k^2 L}{2} )  \langle \nabla_x F(X_k), -   \nabla_x f(X_k,Z_{k+1}) \rangle  \\
+    &= F(X_k) +( \frac{\alpha_k^2 L}{2} - \alpha_k)  \|\nabla F(X_k) - \nabla_x f(X_k,Z_{k+1})\|^2 + (\alpha_k- \frac{\alpha_k^2 L}{2} )  \langle \nabla_x F(X_k), -   \nabla_x f(X_k,Z_{k+1}) \rangle  \\
+    &= F(X_k) +( \frac{\alpha_k^2 L}{2} - \alpha_k)  \|\epsilon_k\|^2 + (\alpha_k- \frac{\alpha_k^2 L}{2} )  \langle \nabla_x F(X_k), -   \nabla_x f(X_k,Z_{k+1}) \rangle  \\
+    &= F(X_k) +( \frac{\alpha_k^2 L}{2} - \alpha_k) ( \|\nabla F(X_k)\|^2 + \|\epsilon_k\|^2 )+ (\alpha_k- \frac{\alpha_k^2 L}{2} ) ( \|\nabla_x F(X_k)  \|^2+ \langle \nabla_x F(X_k), -   \nabla_x f(X_k,Z_{k+1}) \rangle)  \\
+    &= F(X_k) +( \frac{\alpha_k^2 L}{2} - \alpha_k) ( \|\nabla F(X_k)\|^2 + \|\epsilon_k\|^2 )+ (\alpha_k- \frac{\alpha_k^2 L}{2} ) \langle \nabla_x F(X_k), \nabla F(X_k) - \nabla_x f(X_k,Z_{k+1}) \rangle  \\
+    &= F(X_k) +( \frac{\alpha_k^2 L}{2} - \alpha_k) ( \|\nabla F(X_k)\|^2 + \|\epsilon_k\|^2 )+ (\alpha_k- \frac{\alpha_k^2 L}{2} ) \langle \nabla_x F(X_k),\epsilon_k \rangle  \\
+    &= F(X_k) - \alpha_k \|\nabla F(X_k)\|^2 + \alpha_k \langle \nabla_x F(X_k),\epsilon_k \rangle + \frac{\alpha_k^2 L }{2} \left( \|\nabla_x F(X_k)\|^2 - \langle \nabla F(X_k),\epsilon_k \rangle + \|\epsilon_k\|^2  \right)  
+\end{align*}
+where $\epsilon_k := \nabla F(X_k) - \nabla_x f(X_k,Z_{k+1})$. Now using the fact that we can pull out the gradient we get that
+$$
+\mathbb{E}[\epsilon_k \mid \mathcal{F}_k] = \nabla F(X_k) - \nabla \mathbb{E}_{Z \sim \mu_{X_k}} [ f(X_k,Z_{k+1} ] =0
+$$
+and using the assumptions we get that
+$$
+\mathbb{E}[\|\epsilon_k\|^2 \mid \mathcal{F}_k] \leq c (1+ F(X_k)-F_*).
+$$
+Together this fives us the assumptions the Robins Monro theorem
+\begin{align*}
+    \mathbb{E}[ \underbrace{F (X_{k+1}) - F_*}_{=: \tilde{Z}_{k+1}} \mid \mathcal{F}_k ] &= \mathbb{E}[ F (X_{k+1}) \mid \mathcal{F}_k]- F_* \\
+    &\leq \mathbb{E}[  F(X_k) - \alpha_k \|\nabla F(X_k)\|^2 + \alpha_k \langle \nabla_x F(X_k),\epsilon_k \rangle + \frac{\alpha_k^2 L }{2} \left( \|\nabla_x F(X_k)\|^2 - \langle \nabla F(X_k),\epsilon_k \rangle + \|\epsilon_k\|^2   \right) \mid \mathcal{F}_k] -F_* \\
+    &=  (F(X_k) -F_* )- \alpha_k \|\nabla F(X_k)\|^2 + (\alpha_k -\frac{\alpha_k^2 L }{2} ) \underbrace{\mathbb{E}[   \langle \nabla_x F(X_k),\epsilon_k \rangle \mid \mathcal{F}_k]}_{=0} + \frac{\alpha_k^2 L }{2} \left( \|\nabla_x F(X_k)\|^2  + \mathbb{E}[  \|\epsilon_k\|^2 \mid \mathcal{F}_k]  \right)  \\
+    &\leq   (F(X_k) -F_* )- \alpha_k \|\nabla F(X_k)\|^2 + \frac{\alpha_k^2 L }{2} \left( \|\nabla_x F(X_k)\|^2  + c(1+F(X_k)-F_*) \right) \\
+    &=(1+ c\frac{\alpha_k^2 L}{2})   \underbrace{(F(X_k) -F_* )}_{=: \tilde{Z}_{k}}+\underbrace{c\frac{\alpha_k^2 L}{2}}_{=:C_k}+ \underbrace{(\frac{\alpha_k^2 L }{2} - \alpha_k ) \|\nabla_x F(X_k)\|^2}_{=:B_k}
+\end{align*}
+Now we need to show that these sequences satisfy the conditions from Robins Siegmund.\\
+Here we used that the sequence $(\tilde{Z}_k)_{k \in \mathbb{N}}$ is non-negative, because $F$ is bounded by below. CHOICE Of $\alpha_k???$
+
+}
+
+
+
+
+
+
+
+
+\end{document}

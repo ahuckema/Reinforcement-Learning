@@ -1,0 +1,213 @@
+\documentclass[A4,12pt,twoside]{book}
+\usepackage{amd}
+
+% %--------------------------------------------------------------------------
+% %         General Setting
+% %--------------------------------------------------------------------------
+
+\graphicspath{{Images/}{../Images/}} %Path of figures
+\setkeys{Gin}{width=0.85\textwidth} %Size of figures
+\setlength{\cftbeforechapskip}{3pt} %space between items in toc
+\setlength{\parindent}{0.5cm} % Idk
+\input{theorems.tex} % Theorems styles and colors
+\usepackage[english]{babel} %Language
+
+\setlist[itemize]{itemsep=5pt} % Adjust the length as needed
+\setlist[enumerate]{itemsep=5pt} % Adjust the length as needed
+
+\usepackage[ruled,vlined]{algorithm2e}
+
+% \usepackage{lmodern} %  Latin Modern font
+% \usepackage{newtxtext,newtxmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage{subfiles}
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+% %--------------------------------------------------------------------------
+% %         General Informations
+% %--------------------------------------------------------------------------
+\newcommand{\BigTitle}{
+    A MATHEMATICAL TEMPLATE
+    }
+
+\newcommand{\LittleTitle}{
+    For Mathematical Peoples
+    }
+\newcommand{\learnstrat}{(\pi_t)_{t=1,\dots,n}}
+    
+\begin{document}
+
+\begin{center}
+   \huge{Reinforcement Learning}\\
+    Arne Huckemann
+\end{center}
+\tableofcontents
+
+
+\chapter{Stochastic Bandits}
+
+
+\subfile{Subfiles/Bandits}
+
+\chapter{Markov Decision Model}
+\section{Markov Decision Problem}
+We will first do stochastic control theory and then do reinforcement learning.
+\subsection{Markov-Chains}
+A Markov Chain is stochastic process $(S_t)_{t \in \mathbb{N}}$ taking values in $\mathcal{S}$ and on $(\Omega, \mathcal{F},\mathbb{P})$ such that
+$$
+\mathbb{P}(S_{t+1} = s_{t+1} \mid S_0 =s_0 ,...,S_t = s_t) = \mathbb{P}(S_{t+1} = s_{t+1} \mid S_t = s_t).
+$$
+for all $s_0,...,s_{t+1} \in \mathcal{S}$ and all $t \in \mathbb{N}$.
+\thm{Path Probabilities}{
+Given a Markov Chain $(S_t)_{t \in \mathbb{N}}$ on $\mathcal{S}$ and a stochastic matrix $P = (p(x,y))_{x,y \in \mathcal{S}}$ and an initial distribution $\mu: \mathcal{S} \to [0,1]$, then
+$$
+\text{$(S_t)_{t \in \mathbb{N}}$ is a $(\mu,P)$-Markov Chain} \iff \mathbb{P} (S_0 =s_0,...,S_t =s_t) = \mu (s_o) p(s_0,s_1) \cdot ... \cdot p(s_{t-1},s_t),
+$$
+for all $t \in \mathbb{N}$ and $s_0,...,s_t \in \mathcal{S}$.
+}
+Using this property we can easily calculate a lot of different probabilities. For instance for $t,k \in \mathbb{N}$
+$$
+\mathbb{P} (S_{t+1}=s_{t+1},...,S_{t+k}=s_{t+k} \mid S_t = s_t)
+$$
+for all $s_t ,..., s_{t+k} \in \mathcal{S}$.\\
+Further, it is imperative to notice that the shifted Chain, is again a Markov Chain, i.e. we define $\tilde{\mathbb{P}} := \mathbb{P}( \cdot \mid S_n =s_n)$, then the chain $(\tilde{S}_t)_{t \in \mathbb{N}} = (S_{t+n})_{t \in \mathbb{N}}$ is again a Markov chain on $(\Omega, \mathcal{F}, \tilde{\mathbb{P}})$.
+\subsection{Markov-Reward-Chains}
+It is important to note, that this is not going to be the same as two dimensional Markov-Chain!
+\defn{Markov Reward Chain}{
+This is a Markov-Chain $(S_t)_{t \in \mathbb{N}}$ with another coordinate $(R_t)_{t \in \mathbb{N}}$, where
+$$
+\mathbb{P}_\mu (S_{t+1}=x_{t+1},R_t = r_t \mid S_0 =s_0,...,S_t =s_t)
+$$
+}
+which is equivalent to
+$$
+\mathbb{P}_\mu (R_{t+1} = r_{t+1},S_{t+1}=x_{t+1} \mid S_0 =s_0,...,S_t =s_t) 
+$$
+but the first formulation will better fit to our formulation with MDPs later.\\
+Like in soccer, you do not always get a reward, only when you score the goal. Shooting at the goal is like tossing a coin on wether the goal keeper catches the ball. \\
+
+\rmkb{
+There exists a transition/reward kernel $p$ on $(\mathcal{R}\times \mathcal{S}) \times \mathcal{S}$ that define the transition from a state to the next state and reward from the previous state $p(r,s^\prime;s)$.
+}
+
+\rmkb{
+If we would condition on the rewards in the Markov rewards process, then we would just have a two dimensional markov chain! This is very improtant! 
+}
+
+Similiar to the factorization in Markov Chains, there a exists a similar (but different) factorization of the Markov reward chain, as we do not condition on the rewards.
+\rmkb{
+The path probabilites of the Markov-Reward chain is given by
+$$
+\mathbb{P}_\mu(S_0=s_0,R_0=r_0,...,S_n=s_n,R_n=r_n) = \mu(s_0) p(r_0,s_1;s_0) \cdot ... \cdot p(r_{n-1},s_n;s_{n-1})
+$$
+}
+Similiar as in Markov Chains, we can show that the shifted Markov-Reward-Chain is again a Markov-Reward Chain.
+\rmkb{
+In the case that
+$$
+\mathbb{P}(S_n = s^\prime )>0
+$$
+and we define $\tilde{\mathbb{P}} := \mathbb{P}(\cdot \mid S_n = s^\prime)$, then we have that for all $n \in \mathbb{N}$
+$$
+(\tilde{S}_t,\tilde{R}_t)_{t \in \mathbb{N}} := (S_{t+n},R_{t+n})_{t \in \mathbb{N}}
+$$
+is again a Markov-Reward Chain on $(\Omega,\mathcal{F},\tilde{\mathbb{P}})$.
+}
+
+
+\subfile{Subfiles/Dynamic Programming}
+
+\chapter{Simulation based dynamic Programming methods}
+In reality there are two problems: We do not know $p$ and $\mathcal{A}$ and $\mathcal{S}$ might be too big. Thus we first have the problem that we do not know $T^*$ or $T^\pi$. The second problem is that $\mathcal{A}$ and $\mathcal{S}$ might be too big to explore in its entirety or that inverting the $Q$-Value matrix, might lead to bad conditioning, i.e.
+$$
+cond(Q) = \|Q\|\|Q^{-1}\|. 
+$$
+
+\defn{}{
+An algorithm to learn optimal policies is called model-based
+if the algorithm requires explicit knowledge on the Markov decision model. A solution algorithm is called model-free if the algorithm only requires the ability to sample all appearing random variables.
+}
+We will now consider only model-free methods.
+
+\section{A first example}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{Pictures/Map.png}
+    \caption{}
+    \label{fig: Map}
+\end{figure}
+Imagine you want to travel from Berlin to Mannheim and want to reduce the travel time. The dots on the map are Autobahn intersections. In order to choose the shortest path, one needs to find an optimal policy, that takes the shortest path in every state. In order to evaluate this policy, we need an estimate for all trajectories. One first approach would be to do Monte Carlo estimation of the State Value function, as this is an expectation. One can do this by sampling different trajectories and calculating the rewards. This method is computationally extensive and not very good. There are multiple ways to improve this approach. We will first focus  on Monte Carlo estimation methods.
+
+\subfile{Subfiles/Monte Carlo}
+
+\subsection{Generalised policy iteration with first visit Monte Carlo estima-
+tion}
+
+\subfile{Subfiles/Finite Time MDPs}
+
+\subfile{Subfiles/Stochastic Fixed Point Iterations}
+
+\subfile{Subfiles/Sample based dynamic Programming}
+
+
+
+
+
+
+
+\subfile{Subfiles/Gradient Descent Methods}
+\subfile{Subfiles/Policy Gradient Methods}
+
+\subfile{Subfiles/Deep Reinforcement Learning}
+
+
+\appendix 
+
+\subfile{Subfiles/Zusatz}
+
+\section{Paar Ideen}
+Let $\Phi_a$ be a PPP on $\mathbb{R}$ with intensity measure $\Lambda_a (dt) := e^{Q_a \theta_a} e^{-t} dt$ (locally finite). Then $\Phi := \sum_{a=1}^K \Phi_a$ is a PPP with intensity measure $\Lambda (dt) := \sum_{a =1}^K \Lambda_a (dt)$. Further define $X:= \max supp (\Phi)$. Then
+\begin{align*}
+    \mathbb{P}(X \leq x) = \mathbb{P}(\Phi (x,\infty)=0) &= e^{-\Lambda ((0,\infty))} \\
+     &= e^{-\sum_{a =1}^K e^{Q_a \theta_a} \int_x^\infty e^{-t} dt} \\
+     &= e^{-\sum_{a =1}^K e^{Q_a \theta_a} e^{-x}} \\
+     &= e^{- e^{-x+\log(\sum_{a =1}^K e^{Q_a \theta_a})}}  \\
+     &= e^{- e^{-(x-\log(\sum_{a =1}^K e^{Q_a \theta_a}))}}  \\
+     &= \mathbb{P}(Y \leq x- \log(\sum_{a =1}^K e^{Q_a \theta_a})), \quad Y \sim Gumbel(0,1)
+\end{align*}
+Further let the joint distribution $(X,A)$ is given by
+$$
+f_{X,A} (x,a) = \Lambda_a (dx) \cdot \mathbb{P}^X (dx) = e^{Q_a \theta_a} e^{-x} \cdot e^{-\sum_{a =1}^K e^{Q_a \theta_a} e^{-x}}.
+$$
+Then 
+\begin{align*}
+    \mathbb{P}(A=a \mid X=x) &= \frac{f_{X,A}(x,a)}{\sum_{b=1}^K f_{X,A}(x,b)} \\
+    &= \frac{e^{Q_a \theta_a} e^{-x} \cdot e^{-\sum_{a =1}^K e^{Q_a \theta_a} e^{-x}}}{\sum_{b=1}^K e^{Q_b \theta_b} e^{-x} \cdot e^{-\sum_{c =1}^K e^{Q_c \theta_c} e^{-x}}} \\
+    &= \frac{e^{Q_a\theta_a}}{\sum_{b=1}^K e^{Q_b \theta_b}}.
+\end{align*}
+Finally due to 
+\begin{align*}
+    \mathbb{P}(A=a) &= \int_\mathbb{R} f_{X,A} (x,a) dx \\
+    &= e^{Q_a \theta_a} \int_\mathbb{R} e^{-x} \cdot e^{-\sum_{a =1}^K e^{Q_a \theta_a} e^{-x}} dx \\
+    &\stackrel{(*)}{=} e^{Q_a \theta_a} \int_{\infty}^0 \frac{u}{\sum_{a =1}^K e^{Q_a \theta_a}} e^{-u} (-\frac{du}{u})\\
+    &= \frac{e^{Q_a \theta_a} }{\sum_{a =1}^K e^{Q_a \theta_a}}
+\end{align*}
+although we used in $(*)$ that $u:= \sum_{a =1}^K e^{Q_a \theta_a} e^{-x}$ and $du= -u \; dx$ which is equivalent to $dx = \frac{-du}{u}$ and finally the fact that $x\to -\infty\quad \Rightarrow \quad u\to\infty$ and $x\to+\infty \quad \Rightarrow \quad u\to0$.\\
+This implies that
+$$
+\mathbb{P}(A=a \mid X=x)  = \mathbb{P}(A=a).
+$$
+Thus simulating the PPP $\Phi$ with intensity $\Lambda$ we can get a softmax distribution if we define $X:= \max supp (\Phi)$ and consider the marginal distribution $\mathbb{P}^A$ of the joint distribution $\mathbb{P}^{(X,A)}$.\\
+Where does the Gumble come from? If we consider $X_a := \max supp (\Phi_a)$ then
+\begin{align*}
+    \mathbb{P}(X_a \leq x) = \mathbb{P}(\Phi(x,\infty) =0) &=e^{-\Lambda_a ((x,\infty))} \\
+    &= e^{- e^{Q_a \theta_a} \int_x^\infty e^{-t} dt  } \\
+    &= e^{- e^{Q_a \theta_a} e^{-x}  } \\
+    &= e^{- e^{-(x-Q_a \theta_a)}  } \\
+    &= \mathbb{P}(Y\leq x-Q_a \theta_a), \quad Y \sim Gumbel (0,1).
+\end{align*}
+
+
+\end{document}

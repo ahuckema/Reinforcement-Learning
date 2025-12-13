@@ -1,0 +1,889 @@
+\documentclass[../main.tex]{subfiles}  % verweist auf die Master‑Datei
+\begin{document}
+
+
+
+\section{Stochastic Fixed Point Iterations
+}
+Suposse we want to solve a fixed point Iteration $F(x)=x$ using the Banach fixed point theorem, but we do not know $F$ and can only sample from it and thus can only work with stochastic approximations $\hat{F(\cdot)} = F(\cdot) + \epsilon(\cdot)$. The question is, does the iteration
+$$
+x_{n+1} = \hat{F(x_{n})}
+$$
+converge to $x^*$. The answer is in general no, due to the fact the errors are too large, if we do Monte Carlo approximations of $F$. One can show that the iteration
+$$
+x_{n+1} = (1-\alpha_n) x_n + \alpha_n \hat{F(x_n)}
+$$
+converges under certain conditions, where the Errors are unbiased and small enough and the step size decays in a certrain speed. Note that for $\alpha \equiv 1$ we have Banach fixed point iteration and for $\alpha \equiv 0$ we have constant sequence.\\
+\rmkb{
+In order to get a little bit of a feeling on how to build algroithms in a model free way, we will now focus on finding roots of functions without any derivatives. These functions can also be expectations.
+}
+The idea is as follows. Consider we want to find the root $x^*$ of $G(x)$, but we only have access to stochastic approximations
+$$
+\tilde{G}(x) = G(x) + \epsilon,
+$$
+where the error are centered, i.e. mean zero. The most generic Robbins-Monro iteration scheme is
+$$
+x_{n+1} = x_n + \alpha_n (G(x)+\epsilon)
+$$
+where $\alpha_n$ is our step size. This is more or less a stochastic version of the Newton method.
+
+
+\exm{}{
+The Problem is that we want to find for the function
+$$
+G(x) = \mathbb{E}[g(x,Y)], \quad Y \sim P
+$$
+the root. We define the approximation as
+$$
+\Psi^{n,n+1} x_0 := x_\Delta^{n+1} := x_\Delta^n + \alpha_n \hat{G}(x_\Delta^n), \quad x_\Delta^0 :=x_0
+$$
+and the true path
+$$
+\Phi^{n,n+1} x_0 := x^{n+1} := x^n + \alpha_n G(x^n)
+$$
+where
+$$
+\hat{G}(x) = G(x) + \epsilon, \quad \epsilon \sim (0,C), \text{where } C= \begin{pmatrix}
+    \sigma_1^2 &0&\cdots &0\\
+    \cdots & \cdots&&\cdots\\
+    0 &\cdots &&\sigma_d^2
+\end{pmatrix}
+$$
+As the errors accumulate over each step of the discrete evolution, we have to consider the following: \\
+If $\Phi^{\cdot,\cdot} $ is asymptotically stable in different regions of non unique fixed points $x^* \in A^*$ (but only some are desired to be reached), does the discrete evolution $\Psi^{\cdot,\cdot}$ inherit this property in finite time?
+This is a to complicated Problem! We only consider the that we have infinite time and $\Phi^{\cdot,\cdot}$ is globally asymptotically stable, i.e. only one unique fixed point. This can also be stated in a different perspective, i.e. let $G$ be a contraction and force the random step size to decrease as it the step size goes to infinity. In this setting, considering the error that the discrete evolution does wrt. the true evolution in each step does not matter anymore and we can just formulate it as
+$$
+x_{n+1} := x_n + \alpha_n \hat{G}(x_n).
+$$
+}
+
+\thm{Simplest Robins Monro Algorithm}{
+Let $(\Omega,\mathcal{F},(\mathcal{F}_n)_{n \in \mathbb{N}}, \mathbb{P})$ be a filtered probability space on which all the following random variables are defined. Suposse the function $G: \mathbb{R} \to \mathbb{R}$ has a root $x^*$ and satisfies
+$$
+\exists \kappa >0 : \quad G(x) \geq \kappa (x-x^*).
+$$
+Then we define the recursive stochastic process
+$$
+x_{n+1} = x_n - \alpha_n \underbrace{(G(x_n)+\epsilon_n)}_{=:y_n}
+$$
+where the following conditions are met
+\begin{itemize}
+    \item The deterministic step-sizes satisfy
+    $$
+    \sum_{n=1}^\infty \alpha_n = \infty \quad \text{and} \quad \sum_{n=1}^\infty \alpha_n^2 < \infty
+     $$
+     \item The errors $\epsilon_n$ are $\mathcal{F}_{n+1}$-measurable and are conditionally on the past unbiased, i.e. $\mathbb{E}[\epsilon_n \mid \mathcal{F}_n] =0$
+     \item The stochastic approximation satisfies
+     $$
+     \mathbb{E}[y_n^2] \leq A + B \mathbb{E}[x_n-x^*]^2.
+     $$
+\end{itemize}
+Then $x_n \stackrel{L^2}{\rightarrow} x^*$ for $n \to \infty$.
+}
+\pf{
+Only Idea:\\
+We define $z_n := \mathbb{E}[(x_n-x^*)^2]$ and show that
+$$
+z_{n+1} \leq z_n (1- \underbrace{2 \alpha_n \kappa}_{=:a_n}) +\underbrace{ \alpha_n^2 e_n}_{=: c_n}
+$$
+because
+$$
+\sum_{n =1}^\infty \alpha_n^2 e_n  \leq\underbrace{ \sum_{n=1}^\infty \alpha_n^2}_{< \infty} \underbrace{\sum_{n= 1}^\infty e_n }_{= \sum_{n=1}^\infty A + B\sum_{n=1}^\infty z_n \stackrel{???}{<} \infty}
+$$
+and
+$$
+\sum_{n=1}^\infty 2 \kappa \alpha_n = \infty
+$$
+We will now show that for an arbitrary positive sequence $(z_n)_{n \in \mathbb{N}}$ that satisfies $z_n \leq (1-a_n) z_n + c_n$ where
+$$
+\sum_{n=1}^\infty a_n =\infty, \quad \sum_{n=1}^\infty c_n < \infty,
+$$
+that $\lim_{n \to \infty}z_n=0$. \\
+We first define some complicated $d_n := z_n + \sum_{k=1}^{n-1} a_k z_k - \sum_{k=1}^{n-1} c_k$ and then show that
+$$
+z_n \geq ... \geq z_{n+1}.
+$$
+Using this we get that the sequence is not only monotonely decreasing but also bounded by below because
+$$
+z_n \geq - \sum_{k=1}^{n-1} c_k > - \infty
+$$
+which is finite by definition. Thus combining montonicity and boundedness implies convergence. Finally because $(z_n)_{n \in \mathbb{N}}$ is non negative and we can rewrite the definition of $d_n$ as
+$$
+d_n := z_n + \sum_{k=1}^{n-1} a_k z_k - \sum_{k=1}^{n-1} c_k \iff z_n := d_n - \sum_{k=1}^{n-1} a_k z_k + \sum_{k=1}^{n-1} c_k
+$$
+and get that
+$$
+0\leq z_n =\underbrace{x_n}_{convergent}  + \underbrace{\sum_{k=1}^{n-1} c_k}_{< \infty} - \sum_{k=1}^{n-1} a_k z_k
+$$
+which implies that $\sum_{k=1}^{n-1} a_k z_k < \infty$ has to be bounded. Because $\sum_{k=1}^{n-1} a_k = \infty$ it follows that $\liminf_{n \to \infty} z_n =0$. We can now show that $(z_n)_{n \in \mathbb{N}}$ is a cauchy sequence and then it follows that  $\lim_{n \to \infty} z_n =0$.
+}
+Note that we have hardly any assumptions on the stochastic approximation $y_n$, but also only get $L^2$-convergence.
+The simplest step sizes that satisfy the conditions in this theorem are
+$$
+\alpha_n = \frac{1}{n^p}, \quad p \in (1/2,1]
+.$$
+Note, that here the third condition is the most restrictive and in many cases not satisfied. Lets consider a deterministic approximation, i.e. $\epsilon_n =0$, then it should hold that
+$$
+G(x_n) \leq A + B (x_n-x^*)
+$$
+In a case that $x^*=0$ and $G(x)=x^2$(schlechtesd Beispiel. Erfüllt schon das erste nicht!), then
+$$
+x^2_n \leq A+ B x_n
+$$
+is not satisfied, for negative values for $x_n$.\\
+We call all vectors $u \in \mathbb{R}^n$
+$$
+G(x)-G(y) \geq \langle u,y-x \rangle
+$$
+subderivatives. This set is defined by
+$$
+\partial G(y) := \{ u \in \mathbb{R}^n \mid G(x)-G(y) \geq \langle u,y-x \rangle, x \in \mathbb{R}^n \}
+$$
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{Pictures/Subderivatives.png}
+    \caption{}
+    \label{fig: Map}
+\end{figure}
+
+The Robins-Monro theorem implies that the root $x^*$ to be subdifferentiable and to contain at least one element:
+$$
+\{\kappa\} \subseteq \partial G(x^*) = \{ u \in \mathbb{R}^n \mid G(x)-\underbrace{G(x^*)}_{=0} \geq \langle u,y-x \rangle, x \in \mathbb{R}^n \}  .
+$$
+Note that non emptiness of the subdifferential does not imply the condition in the theorem!
+
+\exm{}{
+Define $G(x) = x-\mu$ and assume iid centered errors $\epsilon_n := \mu - Z_{n+1}$, where $(Z_n)_{n \in \mathbb{N}}$ is an iid sequence with expectation $\mu$ and finite moments, i.e. the conditions of the simplest Robins Monro Algorithm are satisfied, i.e. $\epsilon_n$ are centered, conditionally unbiased, $\mathbb{E}[y_n^2] \leq ...$. Choosing $\alpha_n$ such that the conditions are satisfied yields
+\begin{align*}
+    x_{n+1}= x_n - \alpha (x_n - \mu + \epsilon_n) &= x_n - \alpha (x_n-\mu + \mu - Z_{n+1})\\
+    &= x_n + \alpha (Z_{n+1} -x_n)
+\end{align*}
+If we now apply the memory trick and choose $\alpha_n = \frac{1}{n+1}$, we get that
+$$
+x_{n+1} = x_n + \frac{1}{n+1} (Z_{n+1} -x_n) = \frac{1}{n+1} \sum_{i=1}^n Z_{n+1} \stackrel{a.s.}{\to} \mu =x^*
+$$
+using the LLN. This is due to
+$$
+x_1 = x_0 + 1 \cdot(Z_1 -x_0)=Z_1, x_2 = x_1+\frac{1}{2} (Z_2 -x_1) = \frac{1}{2} \sum_{i=1}^2 Z_i, \quad...
+$$
+This iteration satisfies all condition from the simplest Robins Monro theorem. For example, because $(Z_n)_{n \in \mathbb{N}}$ are the only random variables appearing, it follows that $\mathcal{F}_n = \sigma (Z_1,...,Z_n)$ and because of iid it holds that
+$$
+\mathbb{E}[\epsilon_n \mid \mathcal{F}_{n+1}] =\mathbb{E}[\mu - Z_n \mid \mathcal{F}_{n+1}] = \mu  - \mathbb{E}[Z_n] =0.
+$$
+We know that $a.s.$ convergence is very slow, but the theorem only has $L^2$-convergence, which is even worse. Therefore, one good example of this algorithms still performs very slowly.
+}
+
+
+\exm{}{
+One of the original Ideas of Robins Monro was the following. Consider
+$$
+G(X)=\mathbb{E}[g(Y)], \quad Y \sim P_X
+$$
+then
+$$
+\epsilon_n := g(Y_{n+1}) - G(X_n), \quad Y \sim P_{X_n}
+$$
+und jetzt???
+}
+
+
+
+We define a generalization of the infinity norm
+\defn{}{
+A vector $\vartheta \in \mathbb{R}^d_+ \setminus \{0\}$ we define the weighted maximum norm $\|\cdot \|_\vartheta$ as
+$$
+\|x\|_\vartheta := \max_{i=1,...,d} \frac{|x_i|}{\vartheta_i}
+$$
+}
+If we choose $\vartheta=\textbf{1}$ then we have the usual maximums norm. Now we also generalize the concept of a contraction.
+\defn{Pseudo-Contraction}{
+We call a mapping $F: \mathbb{R}^d \to \mathbb{R}^d$ a weighted maximums norm pseudo contraction if 
+$$
+\exists x^* \in \mathbb{R}^d, \vartheta \in \mathbb{R}^d_+\setminus \{0\}, \lambda \in [0,1) \forall x \in \mathbb{R}^d: \quad \|F(x)-x^*\|_\vartheta \leq \lambda \|x-x^*\|_\vartheta
+$$
+}
+A pseudo contraction wrt. $\|\cdot\|_\vartheta$ is a special case of a contraction wrt. $\|\cdot\|_\vartheta$, i.e. choose $x_2=x^*= F(x^*)$ as the fixed point.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{Pictures/Contraction.png}
+    \caption{Contraction vs. no contraction}
+    \label{fig: Map}
+\end{figure}
+A contraction can never grow faster than linear. This is the case in the right plot. For a psuedo contraction it holds that if $\vartheta_i$ is chosen huge, then the $i^{th}$ coordinate is not weighted as heavily. If $\vartheta_i \to 0$ then in this coordinate, the pseudo contraction forces it not to grow heavily.  
+We will now look into stochastic fixed point iterations. We motivate this using the Banach fixed point theorem
+$$
+x_{n+1} = F(x_n) = x_n + F(x_n) - x_n \approx x_n + \hat{F}(x_n) + \epsilon_n - x_n,
+$$
+where $\hat{F}$ is an stochastic approximation of $F$ and $\epsilon_n$ are errors that do not decrease. This method clearly does not converge, because the errors of the approximation will dominate and thus it will only fluctuate. Introducing a step size (which will be random), when updating, will alleviate this problem, if it decreases fast enough. Thus we get
+$$
+x_{n+1} \approx x_n + \alpha_n ( \hat{F}(x_n) +\epsilon_n - x_n) = (1-\alpha_n) x_n + \alpha_n (\hat{F}(x_n) + \epsilon_n).
+$$
+Thus we define the mutlidimensional scheme for all $i=1,...,d$
+$$
+x_i (n+1) := (1-\alpha_i (n)) x_i (n) + \alpha_i (n) (F_i(x(n)) + \epsilon_i (n)).
+$$
+Here we interpret the old value $x_i (n)$ as the best known estimate so far that we choose with probability $(1- \alpha_i (n)))$ and $(F_i(x(n)) + \epsilon_i (n))$ as the new estimate that we choose with probability $\alpha_i (n)$. The decreasing step size can be interpreted as, increase in the confidence of the best guess so far.
+
+\defn{}{
+An multivariate fixed point iteration algorithm is called totally synchronous if
+$$
+\forall n \in \mathbb{N}: \quad \alpha_1 (n) =...= \alpha_d (n).
+$$
+Else it is called asynchronous. If in each step there is in each step only one $\alpha_i (n)=1$ then it is called totally asynchronous.
+}
+If the above iteration scheme is updated totally synchronous with $\alpha_i (n)=1$ for all $i=1,...,d$ and $n \in \mathbb{N}$ we just have the Banach fixed point iteration scheme.
+
+
+\thm{Simple stochastic fixed point iteration on $\mathbb{R}$}{
+Let $(\Omega, \mathcal{F}, (\mathcal{F}_n)_{n \in \mathbb{N}}, \mathbb{P} )$ be a filtered probability space on which all following random variables are defined. Further, let
+\begin{itemize}
+    \item $F: \mathbb{R} \to \mathbb{R}$ be a contraction
+    \item $\epsilon_n$ be $\mathcal{F}_{n+1}$ measurable for all $n \in \mathbb{N}$ and
+    $$
+   \forall n \in \mathbb{N}:\quad \mathbb{E}[\epsilon_n \mid \mathcal{F}_n] =0 \quad \text{ and }\quad \mathbb{E}[\epsilon^2_n \mid \mathcal{F}_n] \leq C.
+    $$
+    \item The random step size $\alpha_n \in [0,1]$ be $\mathcal{F}_n$ measurable with
+    $$
+    \sum_{k=1}^\infty \alpha_k = \infty \quad \text{ and } \quad  \sum_{k=1}^\infty \alpha_k^2 < \infty \quad a.s.
+    $$
+\end{itemize}
+Then the stochastic process $(x_n)_{n \in \mathbb{N}}$ where $\mathcal{F}_0$-measurable (for some initial condition) and
+$$
+x_{n+1} := x_n + \alpha_n (F(x_n) + \epsilon_n - x_n) \stackrel{a.s.}{\rightarrow} x^* \stackrel{unique}{=} F(x^*).
+$$
+}
+\pf{
+Skipped, as assumptions are too strong.
+}
+Now we have a little less restrictive assumptions and do it multidimensional.
+
+
+\thm{Stochastic fixed point iteration for contractions on $\mathbb{R}^d$}{\label{Fixed Theorem}
+Let $(\Omega, \mathcal{F}, (\mathcal{F}_n)_{n \in \mathbb{N}}, \mathbb{P} )$ be a filtered probability space on which all following random variables are defined. Further, we define the sequence $\forall i=1,...,d$
+$$
+x_i(n+1) := (1-\alpha_i (n)) x_i (n) + \alpha_i (F_i^n (x(n))  + \epsilon_i (n) + b_i (n)), \quad n \in \mathbb{N}
+$$
+where we have the following assumptions
+\begin{itemize}
+    \item All $F^n: \mathbb{R}^d \to \mathbb{R}^d$ are pseudo contractions for the same norm $\|\cdot\|_\vartheta$ with the same $\lambda \in [0,1)$ and $x^*$, i.e.
+    $$
+    \forall n \in \mathbb{N} \forall x \in \mathbb{R}^d: \quad \|F^n (x) -x^*\|_\vartheta \leq \lambda \|x -x^*\|_\vartheta  
+    $$
+    \item The random step sizes $((\alpha_i(n))_{i=1,...,n})_{n \in \mathbb{N}}$ are $\mathcal{F}_n$-adapted and satisfy
+    $$
+   \forall i=1,...,d:\quad \sum_{n=1}^\infty \alpha_i (n) = \infty \quad \text{and} \quad \sum_{n=1}^\infty \alpha_i (n)^2 < \infty \quad a.s.
+    $$
+    \item The errors $\epsilon_i (n)$ satisfy the following for every coordinate
+    \begin{itemize}
+        \item $\epsilon_i (n)$ is $\mathcal{F}_{n+1}$-measurable
+        \item $\mathbb{E}[\epsilon_i (n) \mid \mathcal{F}_n] =0$
+        \item The conditional second moment satisfies
+        $$
+       \forall i=1,...,d \exists A,B \geq 0:\quad \mathbb{E}[\epsilon_i (n)^2 \mid \mathcal{F}_n] \leq A + B \|x(n)\|_\vartheta^2
+        $$
+    \end{itemize}
+    \item There exists a sequence of random variables $(\omega_n)_{n \in \mathbb{N}}$ that satisfies
+    \begin{itemize}
+        \item $\lim_{n \to \infty} \omega_n =0$
+        \item $\forall i=1,...,d:$ $|b_i(n)| \leq \omega_n \cdot (1+ ||x(n)\|_\vartheta)$, $n \in \mathbb{N}$.
+    \end{itemize}
+\end{itemize}
+Then it follows that $\lim_{n \to \infty} x (n) = x^*$ $a.s.$
+}
+We will only prove this for the following conditions
+\begin{itemize}
+    \item $d=1$
+    \item $b \equiv 0$
+    \item $\forall n \in \mathbb{N}:$ $F^n \equiv F$
+    \item $B=0$
+\end{itemize}
+\section{Proof of the general stochastic fixed point iteration}
+To keep it even simpler we set $F(x) = \lambda x$, $\lambda \in (0,1)$. Then $x^*=0$ and we can simplify the recursion even further by
+\begin{align*}
+    x_{n+1} &= (1- \alpha_n) x_n + \alpha_n (\lambda x_n + \epsilon_n)\\
+    &= (1-\alpha_n + \alpha_n \lambda) x_n + \alpha_n \epsilon_n \\
+    &=(1+ (\lambda -1) \alpha_n) x_n + \alpha_n \epsilon_n\\
+    &= (1- (1-\lambda)\alpha_n) x_n + \frac{1-\lambda}{1-\lambda} \alpha_n \epsilon_n\\
+    &= (1- \bar{\alpha_n}) x_n + \bar{\alpha_n} \bar{\epsilon_n},
+\end{align*}
+where $\bar{\alpha_n} := (1- \lambda)\alpha_n$ and $\bar{\epsilon_n} := \frac{\epsilon_n}{1-\lambda}$.
+
+We will first proove the boundedness and then the proof of convergence will follow very easily.
+\subsection{Proof of boundedness}
+First the idea:\\
+1. In order to show boundedness of the sequence $x(n)$ we first show that the contraction property of $F^n_i$ implies linear growth. Using this property in the proof will be easier.
+
+2. Rescaling: We show that the sequence $(\tilde{x}_i (n) := \frac{x_i (n)}{\vartheta_i})_{n \in \mathbb{N}}$ solves the same recursion as $(x(n))_{n \in \mathbb{N}}$ but only wrt.
+$$
+\tilde{F}_i^n (x) := \frac{F_i^n(\vartheta_i x)}{\vartheta_i}, \quad \tilde{\epsilon}_i (n) := \frac{\epsilon_i(n)}{\vartheta_i}
+$$
+and the $\|\cdot \|_\infty$. Therefore we can assume wlog $\vartheta = \textbf{1}$.
+
+3. $\exists (G_n)_{n \in \mathbb{N}}$ and $\exists \epsilon >0$ in a specific way such that 
+$$
+\|x(n)\|_\infty \leq (1+\epsilon) G_n, \text{ and } \|F^n (x(n))\|_\infty + \omega_n (\|x(n)\|_\infty+1) \leq G_n
+$$
+where $G_n$ is a $\textbf{non}$-decreasing sequence, i.e. it either stays constant, if at time $n \in \mathbb{N}$ it holds that $\|x(n)\|_\infty \leq (1+\epsilon) G_n$ and else it increases, i.e. choose $\kappa (n)$ such that
+$$
+(1+\epsilon)^{\kappa (n) -1}G_{n_0} < \| x(n+1)\|_\infty \leq (1+\epsilon)^{\kappa (n) }G_{n_0} =: G_{n+1}.
+$$
+Intuition für dei Bedinung von F???\\
+
+4. Show that $(G_n)_{n \in \mathbb{N}}$ stops growing.
+
+a) Rescale the errors such that
+$$
+\mathbb{E}[\tilde{\epsilon}_i^2 (n) \mid \mathcal{F}_n] \leq \underbrace{\frac{A}{G_n}}_{\leq A} + B (1+\epsilon)^2
+$$
+b) Apply Lemma of the convergence of the cumulative biased convexcombination of errors sequence: 
+$$
+\tilde{W}_i (n+1 : n_0) = (1-\alpha_i (n)) W_i (n:n_0) + \alpha_i (n)\tilde{\epsilon}_i (n), \quad \tilde{W}_i (n_0:n_0)=0.
+$$
+is bounded if started in $n_0$ large enough. This says, that if we start the cumulative convexcombination of the errors for $n_0$ large enough, then the entire convexcombination of all errors for $n\geq n_0$ to infinity will be bounded. This statement uses that $\lim_{n \to \infty} \tilde{W}_i (n:0)=0$, as all conditions of Lemma \ref{Wn goes to zero} are satisfied.
+
+c) Assume $(x(n))_{n \in \mathbb{N}}$ is unbounded. Then by construction of the $G_n$ it follows that $G_n \to \infty$ and $\|x(n)\|_\infty \leq G_n$ holds infinitely often. Now choose $\forall \xi >0$ a $n_0 \in \mathbb{N}$ large enough such that
+\begin{itemize}
+    \item $\| x(n_0) \|_\infty \leq G_{n_0}$
+    \item $\forall n \geq n_0:$ $\|\tilde{W}(n:n_0) \|_\infty \leq \xi$
+    \item $\forall n \geq n_0$ $\exists \omega^*:$ $\omega_n \leq \omega^*$
+\end{itemize}
+Then it follows that
+$$
+\text{$\forall n \geq n_0$ it holds that $G_n =G_{n_0}$} \quad \text{and }\quad \forall n \geq n_0, \forall \xi>0: \quad |x_i (n)| \leq G_{n_0} (1+\xi).
+$$
+The second condition follows by induction. Because $\xi >0$ was chosen arbitrary it follows by the construction of the $G_n$ that the first case, i.e. $G_n =G_{n_0}$ for all $n \geq n_0$, always holds, i.e. the second condition. This now implies boundedness of $(x(n))_{n \in \mathbb{N}}$ which is a contradiction! Thus the opposite holds!
+
+
+
+
+\thm{}{
+Let $(\Omega, \mathcal{F}, (\mathcal{F}_n)_{n \in \mathbb{N}}, \mathbb{P} )$ be a filtered probability space on which all following random variables are defined. Assume that all assumptions from Theorem \ref{Fixed Theorem} hold and let $x(n)$ be generated from that sequence. Then if we firhter assume that the following condition, that is called linear growth condition is met, i.e.
+$$
+\exists \lambda \in (0,1) , D \in \mathbb{R}: \quad \|F^n(x)\|_\vartheta \leq \lambda \|x(n)\|_\vartheta +D
+$$
+then $(x(n))_{n\in \mathbb{N}}$ is bounded $a.s.$, i.e.
+$$
+\forall \omega \in \Omega \exists (c_n (\omega))_{n \in \mathbb{N}} \forall n \in \mathbb{N}: x(n)(\omega) \leq c_n (\omega),
+$$
+i.e. we have for every realization a bound.
+}
+This theorem will be prooven in the very end of this section. ???
+
+\thm{Robins-Siegmund Theorem}{
+Let $(\Omega, \mathcal{F}, (\mathcal{F}_n)_{n \in \mathbb{N}}, \mathbb{P} )$ be a filtered probability space on which the sequences $(Z_n)_{n \in \mathbb{N}}$, $(A_n)_{n \in \mathbb{N}}$, $(B_n)_{n \in \mathbb{N}}$ and $(C_n)_{n \in \mathbb{N}}$ are defined that are non negative stochastic processes that are adapted and that satisfy
+$$
+\sum_{k=1}^\infty A_k <\infty \quad \text{and} \quad \sum_{k=1}^\infty B_k <\infty \quad a.s.
+$$
+and let
+$$
+\mathbb{E}[Z_{n+1} \mid \mathcal{F}_{n}] \leq Z_{n} (1+ A_n) + B_n -C_n, \quad n \in \mathbb{N}.
+$$
+Then it holds that
+\begin{itemize}
+    \item The limit
+    $$
+    \lim_{n \to \infty} Z_n =: Z_\infty <\infty \quad a.s.
+    $$
+    exists.
+    \item It holds that
+    $$
+    \sum_{k=0}^\infty C_k < \infty \quad a.s.
+    $$
+\end{itemize}
+}
+\pf{
+For the first part, we will apply Doobs Convergence theorem. We will show: A supermartingal $(X_n)_{n \in \mathbb{N}}$ that satisfies 
+$$
+\sup_{t \in \mathbb{N}} \mathbb{E}[X_t^-] < \infty, \quad \text{where } X_t^- := - \min \{X_t,0\},
+$$
+the limit $\lim_{t \to \infty} X_t =:X$ exists $a.s.$ with $\mathbb{E}[X]<\infty$.\\
+We will now construct this supermartingal. Define
+$$
+\hat{Z}_n := \frac{Z_n}{\prod_{k=0}^{n-1} (1+ A_k)}, \quad \hat{B}_n := \frac{B_n}{\prod_{k=0}^{n-1} (1+ A_k)}, \quad \hat{C}_n := \frac{C_n}{\prod_{k=0}^{n-1} (1+ A_k)}.
+$$
+and
+$$
+M_n := \hat{Z}_{n+1} - \sum_{k=0}^{n-1} (\hat{B}_k -\hat{C}_k).
+$$
+Then we can show that $(M_n)_{n \in \mathbb{N}}$ is a supermatringal. Here we use that for $k \leq n$ it holds that $\hat{C}_k$ and $\hat{B}_k$ are $\mathcal{F}_n$ measurable, because they are $\mathcal{F}_k$ measurable and $\mathcal{F}_0 \subseteq ... \subseteq \mathcal{F}_{n}$. This yieds
+\begin{align*}
+    \mathbb{E}[M_{n+1} \mid \mathcal{F}_n] &= \mathbb{E}[\hat{Z}_{n+1} \mid \mathcal{F}_n] - \sum_{k=0}^{n} (\mathbb{E}[\hat{B}_k \mid \mathcal{F}_n] -\mathbb{E}[\hat{C}_k \mid \mathcal{F}_n]) \\
+    &= \mathbb{E}[\frac{Z_{n+1}}{\prod_{k=0}^{n-1} (1+ A_k)} \mid \mathcal{F}_n] - \sum_{k=0}^{n} (\mathbb{E}[\hat{B}_k \mid \mathcal{F}_n] -\mathbb{E}[\hat{C}_k \mid \mathcal{F}_n]) \\
+    &= \frac{1}{\prod_{k=0}^{n-1} (1+ A_k)} \mathbb{E}[Z_{n+1} \mid \mathcal{F}_n] - \sum_{k=0}^{n} (\hat{B}_k  -\hat{C}_k) \\
+    &\stackrel{VSS}{\leq} \frac{1}{\prod_{k=0}^{n-1} (1+ A_k)} (Z_n (1+ A_n )+B_n-C_n) - \sum_{k=0}^{n} (\hat{B}_k  -\hat{C}_k) \\
+    &\stackrel{Def}{\leq} (\hat{Z}_n +\hat{B}_n-\hat{C}_n) - \sum_{k=0}^{n} (\hat{B}_k  -\hat{C}_k) \\
+    &= \hat{Z}_n - \sum_{k=0}^{n-1} (\hat{B}_k  -\hat{C}_k) = M_n
+\end{align*}
+Thus $(M_n)_{n \in \mathbb{N}}$ is a supermartingal. Now in order to apply the Doops theorem, we need to verify, that 
+$$
+\sup_{t \in \mathbb{N}} \mathbb{E}[M_t^-] < \infty, \quad \text{where } M_t^- := - \min \{M_t,0\}.
+$$
+We will first show this locally. For this we define
+$$
+\forall \epsilon >0: \quad \tau_\epsilon := \inf \{ n \in \mathbb{N} \mid \sum_{k=0}^n \hat{B}_k > \epsilon \}
+$$
+then $\tau_\epsilon$ is a stopping time wrt. the filtration $(\mathcal{F}_n)_{n \in \mathbb{N}}$ (???). \\
+$(M_{n \wedge \tau_\epsilon})_{n \in \mathbb{N}}$ is still a supermartingal and is uniformly bounded ($\exists const \forall n \in \mathbb{N}$: $|x_n| \leq M$), i.e. $\forall n \in \mathbb{N}$
+$$
+M_{n \wedge \tau_\epsilon} = \hat{Z}_{n \wedge \tau_\epsilon} - \sum_{k=0}^{(n \wedge \tau_\epsilon)-1} \hat{B}_k + \sum_{k=0}^{(n \wedge \tau_\epsilon)-1} \hat{C}_k \geq - \sum_{k=0}^{(n \wedge \tau_\epsilon)-1} \hat{B}_k \stackrel{\text{construction $\tau_\epsilon$}}{\geq} - \epsilon.
+$$
+Using this we get directly that
+$$
+\sup_{n \in \mathbb{N}} \mathbb{E}[|M_{n \wedge \tau_\epsilon}|]< \infty.
+$$
+Thus we can use Doops Matringal theorem and get that
+$$
+\forall \epsilon >0 \exists M_\infty^\epsilon := \lim_{n \to \infty} M_{n \wedge \tau_\epsilon} \text{ finite.} \quad a.s.
+$$
+(Note boundedness is not sufficient for convergence. We need monotonicity, which we get from the supermartingal Property).\\
+To show: $\lim_{n \to \infty} M_n < \infty$ $a.s.$\\
+Let $(\epsilon_k)_{k \in \mathbb{N}}$ be an increasing sequence with $\lim_{k \to \infty} \epsilon_k = \infty$.\\
+Because we showed the above only $a.s.$ for every $\epsilon>0$ we have that for Null sets $N \subseteq \Omega$, that
+$$
+\forall k \in \mathbb{N} \forall \omega \in \Omega \setminus N: \quad \lim_{n \to \infty} M_{n \wedge \tau_{\epsilon_k}} (\omega) =: M_\infty^{\epsilon_k} (\omega) \text{ exists.}
+$$
+The set 
+$$
+\Omega^{\hat{B}} := \{\omega \in \Omega \mid \sum_{k=0}^\infty \hat{B}_k(\omega) < \infty \} \subseteq \Omega
+$$
+is no null set due to 
+\begin{align*}
+    \mathbb{P}\left ( \sum_{k=0}^\infty \hat{B}_k < \infty \right) &= \mathbb{P}\left ( \sum_{k=0}^\infty \frac{B_k}{\prod_{i=0}^k (1+A_i)} < \infty \right) \\
+    &\geq \mathbb{P}\left ( \sum_{k=0}^\infty \frac{B_k}{e^{\sum_{i=0}^k (1+A_i)}} < \infty \right) 
+\end{align*}
+although we used that $e^{-x} \geq \frac{1}{1+x}$. Finally, using that $e^{-x}$ is monotonically decreasing and $A_i \geq 0$, it follows that
+\begin{align*}
+    \mathbb{P}\left ( \sum_{k=0}^\infty \frac{B_k}{e^{\sum_{i=0}^k (1+A_i)}} < \infty \right) \geq \mathbb{P}\left ( \sum_{k=0}^\infty \frac{B_k}{e^{0}} < \infty \right)
+    = \mathbb{P}\left ( \sum_{k=0}^\infty B_k< \infty \right)\stackrel{VSS}{>} 0.
+\end{align*}
+Thus $\forall \omega \in \Omega^{\hat{B}}$ it holds that if we choose $N \in \mathbb{N}$ such that $\epsilon_N$ large enough, then $\omega \in \{\tau_{\epsilon_N} = \infty \}$. We have
+$$
+\forall \omega \in \Omega^{\hat{B}} \forall n \in \mathbb{N}: \quad M_{n \wedge \tau_{\epsilon_N}} (\omega)= M_n (\omega). 
+$$
+This leads using
+$$
+\sup_{n \in \mathbb{N}} \mathbb{E}[|M_{n}|] =\sup_{n \in \mathbb{N}} \mathbb{E}[|M_{n \wedge \tau_{\epsilon_N}}|] < \infty
+$$
+with Doobs convergence theorem to
+$$
+\forall \omega \in \Omega^{\hat{B}}: \quad \lim_{n \to \infty} M_n (\omega) =\lim_{n \to \infty} M_{n \wedge \tau_{\epsilon_N}} (\omega) = M_\infty^{\epsilon_N}< \infty  \text{ exists.}
+$$
+Now we can show the two assertion:
+\begin{itemize}
+    \item $Z_n$ converges almoust surely:\\
+    Using the fact that $\forall i$ it holds that $\hat{B}_i \leq B_i$ it follows
+    \begin{align*}
+        - \infty &\stackrel{VSS}{<} - \sum_{k=0}^\infty B_k \leq  - \sum_{k=0}^\infty \hat{B}_k  \\
+        &\leq \lim_{n \to \infty} \left( \underbrace{\hat{Z}_n}_{\geq 0}  - \sum_{k=0}^{n-1} \hat{B}_k + \underbrace{\sum_{k=0}^{n-1} \hat{C}_k}_{\geq 0} \right) \stackrel{Def.}{=} \lim_{n \to \infty} M_n \stackrel{above}{<} \infty \quad a.s.
+    \end{align*}
+    Now using the non-negativity (???) we get that
+    $$
+    \lim_{n \to \infty} \hat{Z}_n \text{ and } \sum_{k=0}^\infty \hat{C}_k \text{ exist} \quad a.s.
+    $$
+    Finally, using that
+    $$
+    \prod_{k=0}^{n-1} (1+A_k) \leq e^{\sum_{k=0}^{n-1} (1+A_k)} \leq e^{\sum_{k=0}^{\infty} (1+A_k)}  \stackrel{VSS}{<} \infty
+    $$
+    it follows that
+    $$
+    \lim_{n \to \infty} Z_n \stackrel{Def.}{= } \lim_{n \to \infty} \hat{Z}_n \prod_{k=0}^{n-1} (1+A_k)  < \infty \quad a.s.
+    $$
+    \item Using the a.s. existence of $\lim_{n \to \infty} Z_n $ leads to
+    \begin{align*}
+        \lim_{n \to \infty} \sum_{k=0}^n C_k & \stackrel{Def.}{=} \lim_{n \to \infty} \sum_{k=0}^n \hat{C}_k \prod_{j=0}^k (1+A_j) \stackrel{\text{non neg.}}{\leq }  \lim_{n \to \infty} \sum_{k=0}^n \hat{C}_k \prod_{j=0}^\infty (1+A_j) \\
+        &\leq \lim_{n \to \infty} \sum_{k=0}^n \hat{C}_k e^{\sum_{j=0}^\infty (1+A_j)} < \infty \quad a.s.
+    \end{align*}
+\end{itemize}
+}
+
+\cor{
+Suppose that $(\Omega, \mathcal{F},\mathbb{P}, (\mathcal{F}_n)_{n \in \mathbb{N}})$ is a filtered probability space on which the non negative adapted stochastic process $(Z_n)_{n \in \mathbb{N}}$, $(a_n)_{n \in \mathbb{N}}$ $(b_n)_{n \in \mathbb{N}}$ $(c_n)_{n \in \mathbb{N}}$  are defined. If 
+$$
+\forall n \in \mathbb{N}:\quad \mathbb{E}[Z_{n+1} \mid \mathcal{F}_n] \leq (1-a_n +b_n) Z_n + c_n
+$$
+and 
+$$
+\sum_{k=1}^\infty a_k = \infty, \quad \sum_{k=1}^\infty b_k < \infty, \quad \sum_{k=1}^\infty c_k < \infty, \quad a.s.
+$$
+then it follows that $\lim_{n \to \infty} Z_n =0$ $a.s.$.
+}
+\pf{
+We define $A_n := b_n$, $B_n := c_n$ and $C_n := Z_n a_n$. With the assumption it follows that
+$$
+\forall n \in \mathbb{N}:\quad \mathbb{E}[Z_{n+1} \mid \mathcal{F}_n] \leq (1-A_n +b_n) Z_n + B_n - C_n
+$$
+and
+$$
+\sum_{k=1}^\infty A_k < \infty, \quad \sum_{k=1}^\infty B_k < \infty, \quad a.s.
+$$
+Using the Robins Siegmund theorem it follows that
+$$
+\lim_{n \to \infty} Z_n \text{ and } \sum_{k=0}^\infty Z_k a_k \text{ exist} \quad a.s.
+$$
+Because by assumption $\sum_{k=0}^\infty a_k = \infty$ it follows that
+$$
+\liminf_{n \to \infty} Z_n =0 \quad a.s.,
+$$
+but because the limit exists, we immediately get that
+$$
+\lim_{n \to \infty} Z_n =0 \quad a.s.
+$$
+}
+
+\lem{}{
+\label{Wn goes to zero}
+Suppose that $(\Omega, \mathcal{F},\mathbb{P}, (\mathcal{F}_n)_{n \in \mathbb{N}})$ is a filtered probability space on which all the following random variabels are defined. Assume that
+\begin{itemize}
+    \item $\epsilon_n$ are $\mathcal{F}_{n+1}$ measurable with $\mathbb{E}[\epsilon_n \mid \mathcal{F}_n] = 0$ and
+    $$
+    \exists \text{ pathwise bounded adapted process $(D_n)_{n \in \mathbb{N}}$, i.e.} \forall n \in \mathbb{N} \forall \omega \in \Omega \setminus N: D_n (\omega) \leq \sup_{n \in \mathbb{N}} D_n (\omega) < \infty,
+    $$
+    that satisfies
+    $$
+    \forall n \in \mathbb{N}: \mathbb{E}[\epsilon_n^2 \mid \mathcal{F}_n] \leq D_n .
+    $$
+    \item $\alpha_n \in [0,1]$ are $\mathcal{F}_n$ measurable random variables satisfying
+    $$
+    \sum_{k=1}^\infty a_k =\infty ,\quad \sum_{k=1}^\infty a_k ^2 <\infty \quad a.s.
+    $$
+\end{itemize}
+Then for the stochastic process $(W_n)_{n \in \mathbb{N}}$ where $W_0$ is $\mathcal{F}_0$-measurable for some initial condition and satisfying
+$$
+W_{n+1} = (1-\alpha_n) W_n + \alpha_n \epsilon_n
+$$
+holds that
+$$
+\lim_{n \to \infty} W_n =0 \quad a.s.
+$$
+}
+\pf{
+We will apply the corollary above to $(W_n^2)_{n \in \mathbb{N}}$.
+\begin{align*}
+    \mathbb{E}[W_{n+1}^2 \mid \mathcal{F}_n] &= \mathbb{E}[ (1-\alpha_n)^2 W_n^2 + \alpha_n^2 \epsilon_n^2 + 2 \alpha_n (1-\alpha_n)W_n \epsilon_n \mid \mathcal{F}_n] \\
+    &=  (1-\alpha_n)^2 W_n^2 + \alpha_n^2 \mathbb{E}[\epsilon_n^2\mid \mathcal{F}_n]  + 2 \alpha_n (1-\alpha_n)W_n \underbrace{\mathbb{E}[\epsilon_n \mid \mathcal{F}_n] }_{=0}\\
+    &=  (1- \underbrace{2 \alpha_n}_{=:a_n} + \underbrace{\alpha_n^2}_{=:b_n}) W_n^2 + \alpha_n^2 \mathbb{E}[\epsilon_n^2\mid \mathcal{F}_n] \\
+    &\leq  (1-a_n +b_n) W_n^2 + \underbrace{\alpha_n^2 D_n}_{=: c_n}
+\end{align*}
+Thus we get with the corollary above that
+$$
+\lim_{n \to \infty} W_n^2 =0 \quad \Rightarrow \quad \lim_{n \to \infty} W_n =0.
+$$
+}
+
+Note that $\epsilon_n$ is $\mathcal{F}_{n+1}$ measurable and $\alpha_n$ only $\mathcal{F}_n$ as the error accurs between step n to $n+1$, if $\epsilon_{n}$ was $\mathcal{F}_{n+1}$ measureable then
+$$
+\mathbb{E}[\epsilon_n \mid \mathcal{F}_n] = \epsilon_n \stackrel{!}{=} 0
+$$
+which would be errors that are zero. ???
+\textbf{Main Proof of the Robins Monro Theorem:}\\
+
+
+\pf{
+W.l.o.g. we can get rid of the weighted norms, i.e. $\vartheta = \textbf{1}$, because if we transform the space 
+$$
+\tilde{x_i} := \frac{x_i}{\vartheta_i}, \quad \tilde{F}_i^n (x) := \frac{F^n ( \vartheta x)}{\vartheta_i}, \quad b
+_i := \frac{b_i}{\vartheta_i}, \quad \text{and } \quad \tilde{\epsilon}_i(n) := \frac{\epsilon_i(n)}{\vartheta_i}.
+$$
+It follows that $\tilde{x}(n)$ solves the same recursion as $x(n)$ only wrt. $\tilde{F}$ and $\tilde{\epsilon},$ i.e.
+$$
+\|\tilde{F}^n (\tilde{x}(n))\|_\infty = \| \frac{F^n (\vartheta_i \frac{x_i}{\vartheta_i} )}{\vartheta_i} \|_\infty = \| F^n (x(n))\|_{\vartheta_i} \leq \lambda \|x(n)\|_{\vartheta_i} + D = \lambda \|  \tilde{x}(n) \|_\infty +D.
+$$
+Therefore we can now work with the $\|\cdot \|_\infty$ norm instead of the $\|\cdot \|_\vartheta$ norm.!\\
+We will now find a very clean bound, such that the proof of convergence will be very easily. If we would find a not so nice upper bound the second part, i.e. the proof of convergence would be harder.\\
+\textbf{To show:}
+\begin{itemize}
+    \item There exists an adapted process $(G_n)_{n \in \mathbb{N}}$ such that
+    $$
+  \exists \epsilon >0:\quad  \|x(n)\|_\infty \leq (1+ \epsilon) G_n
+    $$
+    and 
+    $$
+    \|F^n (x(n))\|_\infty + \omega_n (\|x(n)\|_\infty +1) \leq G_n.
+    $$
+\end{itemize}
+Let $\lambda$ and $D$ be the constants from the Robins Monro theorem. Choose a constant $G \geq 1$ such that $\lambda G +D < G$, for example $G := \max \{\frac{D+1}{1-\lambda},1\}$. Next, choose $\eta \in [0,1)$ such that $\lambda G+D = \eta G$. Because $D>0$ it follows that
+$$
+\lambda G < \lambda G + D = \eta G \quad \iff \quad \lambda < \eta.
+$$
+Finally, choose $\epsilon >0$ such that $(1+ \epsilon) \eta =1$.\\
+Next, we define the random recursive sequence
+$$
+G_{n+1} := \begin{cases}
+    G_n &,\|x(n+1)\|_\infty \leq (1+ \epsilon) G_n \\
+    G_0 (1+\epsilon)^{\kappa(n)} &, else
+\end{cases}, \quad \text{ from the choice of $\kappa(n)$}
+$$
+where $G_0 := \max \{\|x(0)\|_\infty,G\}$ and choose $\kappa (n) \in \mathbb{R}$ such that
+$$
+G_0(1+\epsilon)^{\kappa (n)-1} < \|x(n+1)\|_\infty \leq G_0(1+\epsilon)^{\kappa (n)}.
+$$
+This is possible because a norm is non negative and with the mapping $const.^x$ we hit all non-negative values for $x \in \mathbb{R}$.\\
+Further, because the norm $\|\cdot \|_\infty$ is continuous if follows that $\|x(n)\|_\infty$ is $\mathcal{F}_n$ measurable. Becuase $G_n$ is only determind by indikators, norms and constants this is sequence is adapted to the given Filtration. The sequence $(G_n)_{n \in \mathbb{N}}$ is non-necreasing, because it either stays the same or it decreases $G_0(1+\epsilon)^{\kappa (n+1)-1} <G_0(1+\epsilon)^{\kappa (n+1)}.$ Further it satisfies by construction that
+$$
+\|x(n)\|_\infty\leq \begin{cases}
+    (1+\epsilon) G_n \\
+    G_n = G_0 (1+\epsilon)^{\kappa (n)} &, G_{n-1} < G_n
+\end{cases}
+$$
+Next, because $\lambda < \eta$ it follows that
+$$
+\lambda \epsilon + \eta < \eta \epsilon + \eta = (1+\epsilon) \eta \stackrel{construction}{= }1.
+$$
+Thus there exists a $\omega^*>0$ such that
+$$
+\lambda \epsilon + \eta + \omega^* (2 + \epsilon) \leq 1.
+$$
+By assumption of the theorem the sequence $(\omega_n)_{n \in \mathbb{N}}$ converges to zero almoust surely, therefore 
+$$
+\exists n^*\in \mathbb{N} \forall n \geq n^*: \quad \omega_n \leq \omega^*, \quad a.s.
+$$
+We will now prove as part of the existence of the adapted process $(G_n)_{n \in \mathbb{N}}$ that
+$$
+\forall n \geq n^*: \quad \|F^n (x(n))\|_\infty + \omega_n \cdot (\|x(n)\|_\infty+1) \leq G_n.
+$$
+Now using the linear growth condition we showed holds in the beginning of this section, we get that
+\begin{align*}
+    \|F^n (x(n))\|_\infty & \stackrel{lin.Gr.Cond.}{\leq } \lambda \|x(n)\|_\infty + D  \\
+    &\leq  \lambda (1+\epsilon) G_n + D  \\
+   &\stackrel{Construction}{=}  \lambda (1+\epsilon) G_n+ (\eta - \lambda) G\\
+   &\stackrel{\text{non-decreasing}}{\leq }  \lambda (1+\epsilon) G_n+ (\eta - \lambda) G_n \\
+   &=  (\lambda+\lambda\epsilon+ \eta - \lambda) G_n = (\lambda \epsilon + \eta) G_n
+\end{align*} 
+Thus we get for all $n \geq n^*$ 
+\begin{align*}
+    \|F^n (x(n))\|_\infty + \omega_n \cdot (\|x(n)\|_\infty +1) &\leq (\lambda \epsilon + \eta) G_n + \omega^* ((1+\epsilon) G_n+1) \\
+    &\leq (\lambda \epsilon + \eta) G_n + \omega^* ((1+\epsilon) G_n+G_n) \\
+    &= (\lambda \epsilon + \eta) G_n + \omega^* ((2+\epsilon) G_n) \\
+    &= \underbrace{(\lambda \epsilon + \eta+ \omega^* ((2+\epsilon) )}_{\leq 1, construction}G_n \\
+    &\leq G_n
+\end{align*}
+What we did is construct a set of boxes that is non decreasing in each step and bound the sequence $(x_n)_{n \in \mathbb{N}}$. We now have to show that this set of boxes ultimately stop growing! We do this first using the error term, i.e. we show that the convex combination ??? of the adjusted error in time step before to the current adjusted error is bounded. We define the adjusted error by
+$$
+\tilde{\epsilon}_i (n) := \frac{\epsilon_i (n)}{G_n}
+$$
+and the iterative convex combination 
+$$
+\tilde{W}_i (n+1: n_0) := (1-\alpha_i (n))\tilde{W}_i (n:n_0) + \alpha_i (n) \tilde{\epsilon}_i (n)
+$$
+started in $\tilde{W}_i (n_0:n_0)=0$.\\
+\textbf{To show:}
+\begin{itemize}
+    \item $$
+    \forall \delta >0\exists n_0 \in \mathbb{N} \forall n \geq n_0: \quad |\tilde{W}_i (n:n_0)| \leq \delta
+    $$
+\end{itemize}
+Step 1: \\
+We begin by showing 
+$$
+\forall \delta \exists n_0 \in \mathbb{N} \forall n \geq n_0: \quad |W_i(n:n_0)|\leq \delta, \quad a.s., \quad i=1,...,d.
+$$
+Because the random sequence $(\tilde{W}_i(n:0))_{n \in \mathbb{N}}$ is generated by only the random sequence $(\epsilon_i(n))_{n \in \mathbb{N}}$ it follows that we can write
+\begin{align*}
+    \tilde{W}_i (n:0) &= (1-\alpha_i (n-1))\tilde{W}_i (n-1:0) + \alpha_i (n-1) \tilde{\epsilon}_i (n-1) \\
+    &= (1-\alpha_i (n-1))\tilde{W}_i (n-1:0) + \alpha_i (n-1) \tilde{\epsilon}_i (n-1) +(1-\alpha_i (n-1))  \underbrace{\tilde{W}_i (n-1:n-1)}_{=0} \\
+    &= (1-\alpha_i (n-1))\tilde{W}_i (n-1:0) + \tilde{W}_i (n:n-1) \\
+    &= (1-\alpha_i (n-1)) \left( (1-\alpha_i (n-2))\tilde{W}_i (n-2:0) + \alpha_i (n-2) \tilde{\epsilon}_i (n-2) \right) + \tilde{W}_i (n:n-1) \\
+    &= \prod_{i=1}^2 (1-\alpha_i (n-i)) \tilde{W}_i (n-2:0)) +(1-\alpha_i (n-1)) \underbrace{\alpha_i (n-2) \tilde{\epsilon}_i (n-2)}_{= (1-\alpha_i (n-2)) 0+ \alpha_i (n-2) \tilde{\epsilon}_i (n-2) = \tilde{W}_i (n-1:n-2) } + \tilde{W}_i (n:n-1) \\
+    &= \prod_{i=1}^2 (1-\alpha_i (n-i)) \tilde{W}_i (n-2:0)) +(1-\alpha_i (n-1)) \tilde{W}_i (n-1:n-2)+ \tilde{W}_i (n:n-1) \\
+    &= \prod_{i=1}^2 (1-\alpha_i (n-i)) \tilde{W}_i (n-2:0)) +(1-\alpha_i (n-1)) \tilde{W}_i (n-1:n-2)+ 0+ \alpha_i (n-1) \tilde{\epsilon}_i (n-1) \\
+    &= \prod_{i=1}^2 (1-\alpha_i (n-i)) \tilde{W}_i (n-2:0)) +\tilde{W}_i (n:n-2) \\
+    &= \prod_{i=1}^s (1-\alpha_i (n-s)) \tilde{W}_i (s:0)) +\tilde{W}_i (n:s), \quad s \leq n
+\end{align*}
+Because every $\alpha_i (n) \leq 1$ we have that for all $s \leq n:$
+$$
+\tilde{W}_i (n:0) \leq \tilde{W}_i (s:0)) +\tilde{W}_i (n:s)
+$$
+which is equivalent to
+$$
+|\tilde{W}_i (n:s)| \leq |\tilde{W}_i (s:0))| + |\tilde{W}_i (n:0)|.
+$$
+Step 2:\\
+The sequence $(W (n:0))_{n \in \mathbb{N}}$ is of the form of Lemma \ref{Wn goes to zero} and because $\epsilon_n$ and $\alpha_n$ satisfy their respective conditions from Lemma \ref{Wn goes to zero} it follows that
+$$
+\lim_{n \to \infty} \tilde{W}_i (n:0) =0.
+$$
+Thus it follows that for every $\delta>0$ there exists $n_0 \in \mathbb{N}$ such that it holds that
+$$
+\forall n \geq n_0: \quad |\tilde{W}_i (n:0)| \leq \frac{\delta}{2}.
+$$
+This now implies that for $n_0 \in \mathbb{N}$ large enough it holds that for $n \geq n_0$:
+$$
+|\tilde{W}_i (n:n_0)| \leq |\tilde{W}_i (n_0:0))| + |\tilde{W}_i (n:0)| \leq \delta.
+$$
+We now want to show that the sequence $(x(n))_{n \in \mathbb{N}}$ is almoust surely unbounded. For this assume that 
+$$
+\Omega_+ := \{ \omega \in \Omega \mid (x(n)(\omega))_{n \in \mathbb{N}} \text{ is unbounded } \}
+$$
+is no Nullset. By construction we have that
+$$
+\| x(n) \|_{\infty} = \begin{cases}
+    (1+\epsilon) G_n &, else\\
+    G_n &,G_{n-1} < G_n
+\end{cases}
+$$
+which implies that $(G_n)_{n \in \mathbb{N}}$ is unbounded, due to the unboundedness of $x(n)$. Because $(G_n)_{n \in \mathbb{N}}$ is unbounded, we have $G_{n-1} < G_n$ infinitely often, i.e. $\| x(n) \|_{\infty} \leq G_n$ infinitely often. This implies that
+\begin{equation}
+\label{first}
+\forall \epsilon>0 \exists n_0 \in \mathbb{N}:\quad \| x(n) \|_{\infty} \leq G_{n_0}
+\end{equation}
+and for all $n\geq n_0$ it holds that
+\begin{equation}
+\label{second}
+\| \tilde{W}(n:n_0)\|_\infty \leq \epsilon.
+\end{equation}
+We can choose $n_0$ even larger if necessary such that
+\begin{equation}
+\label{third}
+\exists \omega^*>0 \forall n \geq n_0: \quad \omega_n \leq \omega^*.
+\end{equation}
+We will now show via induction the following two results: First  $\forall n \geq n_0$ 
+$$
+G_n = G_{n_0}
+$$
+and that
+\begin{align*}
+    - G_{n_0} (1+\epsilon) &\leq - G_{n_0} + \tilde{W}_i (n:n_0)G_{n_0} \\
+    &\leq x_i (n) \\
+    &\leq G_{n_0} + \tilde{W}_i (n:n_0)G_{n_0} \\
+    &\leq G_{n_0} (1+\epsilon)
+\end{align*}
+But this will imply that $(x(n))_{n \in \mathbb{N}}$ is almoust surely bounded, i.e. a contraction! Therefore, it is bounded. What is left to show is that the equations above by induction.\\
+Induction Start:\\
+We have $n=n_0$ thus
+\begin{align*}
+    - G_{n_0} (1+\epsilon) &\leq - G_{n_0} + \underbrace{\tilde{W}_i (n:n_0)}_{=0}G_{n_0} \\
+    & \leq - \|x(n)\|_\infty\\
+    &\leq x_i (n) \\
+    &\leq G_{n_0} + \underbrace{\tilde{W}_i (n:n_0)}_{=0}G_{n_0} \\
+    &\leq G_{n_0} (1+\epsilon)
+\end{align*}
+and $G_n=G_{n_0}$ clearly.
+Induction Step:\\
+\begin{align*}
+    x_i (n+1) & \stackrel{Def.}{=} (1-\alpha_i (n)) x_i (n) +\alpha_i (n)F_i^n (x(n)) + \alpha_i(n) \epsilon_i (n) + \alpha_i b_i (n) \\
+    &\stackrel{IV}{\leq}  (1-\alpha_i (n)) \left( G_{n_0} + \tilde{W}_i (n:n_0)G_{n_0} \right) +\alpha_i (n)F_i^n (x(n)) + \alpha_i(n) \epsilon_i (n) + \alpha_i b_i (n) \\
+    &\stackrel{constr.}{=}  (1-\alpha_i (n)) \left( G_{n_0} + \tilde{W}_i (n:n_0)G_{n_0} \right) +\alpha_i (n)F_i^n (x(n)) + \alpha_i(n) \tilde{\epsilon}_i (n) G_{n_0} + \alpha_i b_i (n) \\
+    &\stackrel{constr.}{=}  (1-\alpha_i (n)) \left( G_{n_0} + \tilde{W}_i (n:n_0)G_{n_0} \right) +\alpha_i (n)F_i^n (x(n)) + \alpha_i(n) \tilde{\epsilon}_i (n) G_{n_0} + \alpha_i b_i (n) \\
+    &\leq  (1-\alpha_i (n)) \left( G_{n_0} + \tilde{W}_i (n:n_0)G_{n_0} \right) + \alpha_i(n) \tilde{\epsilon}_i (n) G_{n_0} +\alpha_i (n)F_i^n (x(n)) +  \alpha_i | b_i (n)| \\
+    &\stackrel{assumption}{\leq}  (1-\alpha_i (n)) \left( G_{n_0} + \tilde{W}_i (n:n_0)G_{n_0} \right) + \alpha_i(n) \tilde{\epsilon}_i (n) G_{n_0} +\alpha_i (n)F_i^n (x(n)) + \alpha_i \omega_n (\|x(n)\|_\infty + 1)\\
+    &\stackrel{above}{\leq}  (1-\alpha_i (n)) \left( G_{n_0} + \tilde{W}_i (n:n_0)G_{n_0} \right)+ \alpha_i(n) \tilde{\epsilon}_i (n) G_{n_0} + \alpha_i G_{n_0}\\
+    &=  (1-\alpha_i (n))  \tilde{W}_i (n:n_0)G_{n_0} + \alpha_i(n) \tilde{\epsilon}_i (n) G_{n_0} + G_{n_0}\\
+    &=  \tilde{W}_i (n+1:n_0) G_{n_0} + G_{n_0}\\
+\end{align*}
+Due to symmetry is also holds that $\tilde{W}_i (n+1:n_0) G_{n_0} - G_{n_0}\leq x_i (n+1)$. Finally, using the above we have that for all $\epsilon>0$
+$$
+|x_i (n+1) \leq G_{n_0} (1+\epsilon)|.
+$$
+Because $\epsilon>0$ was chosen arbitrary and also $\|x(n+1)\|_\infty \leq (1+ \epsilon) G_{n+1}$ holds, it follows that $G_{n+1} = G_{n_0}$.
+
+\subsection{Proof of convergence}
+First the Idea:\\
+1. Rescale the Coordinate System, i.e. w.l.o.g. let $F^n (x^*) =x^* =0$.\\
+2. In the first part we showed that there is an a.s. upper bound $D_0 >0$ with
+$$
+\forall n \in \mathbb{N}:\quad \|x(n)\|_\infty \leq D_0.
+$$
+When considering the sequence for $n \geq n_0$
+$$
+W_i (n+1:n_0) := (1-\alpha_i (n)) W_i (n:n_0) + \alpha_i (n) \epsilon_i (n), \quad W_i (n_0:n_0)=0
+$$
+then we do not need to rescale it this time, because it already satisfies the assumption of Lemma \ref{Wn goes to zero}:
+$$
+\forall n \in \mathbb{N}: \quad \mathbb{E}[\epsilon_n^2 \mid \mathcal{F}_n] \leq A+ B \|x(n)\|_\infty^2 \leq A+B D_k^2< \infty, \quad a.s.
+$$
+Thus $(W(n:n_0))_{n \in \mathbb{N}}$ converges to zero for all $n_0 \in \mathbb{N}$.\\
+3. We define a decreasing sequence $(D_k)_{k \in \mathbb{N}}$ and show via induction, i.e. for all $k \in \mathbb{N}$ that
+$$
+\exists n_k \in \mathbb{N} \forall n \geq n_k: \quad \|x(n)\|_\infty \leq D_k \quad a.s.
+$$
+\textbf{Proof}:\\
+Because the shifted recursion $\tilde{F}^n(\cdot):= F(\cdot + x^*)-x^*$ is a contraction:
+$$
+\|\tilde{F}^n(x) - 0\|_\infty =\|F(x + x^*)-x^*\|_\infty \leq \lambda \| x+x^* -x^*\|_\infty = \lambda \|x-0\|_\infty.
+$$
+Suppose that the recursion $(\tilde{x}_n)_{n \in \mathbb{N}}$ generated by $\tilde{F}^n $ is proven to converge to $0$. Then $\tilde{x}_n + x^* \to x^*$ implies that $x_n \to x^*$, because
+\begin{align*}
+    \tilde{x}_i (n+1) + x^* &= (1-\alpha_i (n)) (\tilde{x}_i (n) + x^*) + \alpha_i (n) \left( \tilde{F}_i^n (x(n)) + x^* + \epsilon_i (n) + b_i (n) \right) \\
+    &= (1-\alpha_i (n)) (\tilde{x}_i (n) + x^*) + \alpha_i (n) \left( F_i^n (x(n)) -x^*+ x^* + \epsilon_i (n) + b_i (n) \right) \\
+    &= x_i (n+1) +x^*.
+\end{align*}
+Thus we can assume without loss of generality that
+$$
+F^n (x^*) = x^* =0.
+$$
+Because $(x (n))_{n \in \mathbb{N}}$ is almoust surely bounded, there exists
+ an almoust surely upper bound
+ $$
+ \|x(n)\|_\infty \leq D_0\quad a.s.
+ $$
+ The sequence
+ $$
+ W_i (n+1:n_0) = (1-\alpha_i (n))W_i (n:n_0) + \alpha_i (n) \epsilon_i (n), \quad W_i (n_0:n_0)=0
+ $$
+ By assumption it holds that
+ $$
+ \mathbb{E}[\epsilon^2_i (n) \mid \mathcal{F}_n] \leq A + B \|x(n)\|_\infty \leq A+ B D_0 < \infty.
+ $$
+ Thus we can now apply Lemma \ref{Wn goes to zero} and get that the sequence $(W(n:n_0))_{n \in \mathbb{N}}$ converges to $0$ for all $n_0 \in \mathbb{N}$.\\
+ \textbf{Outer Induction: To show:} There exists a sequence $(n_k)_{k \in \mathbb{N}}$ such that for all $n \geq n_k$ it holds that $\|x(n)\|_\infty \leq D_k.$\\
+ Induction Start: We already know that $\|x(n)\|_\infty \leq D_0$  a.s., i.e. $n_0=0$. \\
+ Induction Voraussetzung: We assume for all $n \geq n_k$ that $\|x(n)\|_\infty \leq D_k$ .\\
+ Induction Step: We begin with the bias term. Using the assumption we get that
+ $$
+\forall n \geq n_k:\quad |b_i (n)| \leq \omega_n (\|x(n)\|_\infty +1 ) \leq \omega_k (D_k +1),
+ $$
+ because $\omega_k$ converges to zero, it follows that the bias disappears. Thus 
+ $$
+ \forall \epsilon>0 \exists \tau_k \geq n_k \forall n \geq \tau_k: \quad \| b(n)\|_\infty \leq \epsilon D_k
+ $$
+Using the $\lambda$ from the theorem (i.e. the contraction factor) we define the stochastic process $(Y_n)_{n \geq \tau_k}$ by
+$$
+Y_i (n+1) := (1-\alpha_i (n)) Y_i (n) +\alpha_i (n) (\lambda +\epsilon)D_k,\quad Y_i (\tau_k) =D_k.
+$$
+We can show that this process converges to $(\lambda +\epsilon) D_k$, due to the following argument. Define $V_i (n) := Y_i (n) - (\lambda + \epsilon) D_k$ that satisfies
+\begin{align*}
+    V_i (n+1) &= Y_i (n+1) - (\lambda + \epsilon) D_k \\
+    &= (1-\alpha_i (n)) Y_i (n) +\alpha_i (n) (\lambda +\epsilon)D_k - (\lambda + \epsilon) D_k  \\
+    &= (1-\alpha_i (n)) ( Y_i (n)-(\lambda +\epsilon)D_k) \\
+    &= (1-\alpha_i (n)) V_i (n)
+\end{align*}
+which converges to zero due to
+$$
+ V_i (n+1) = \prod_{j=1}^{n+1} (1-\alpha_i (j)) V_i (0)
+$$
+and because by assumption $\sum_{j=1}^\infty \alpha_i (j)^2 <\infty  $ it follows that $(\alpha_i (j))_{j \in \mathbb{N}}$ is a zero sequence therefore, finitely many values are greater than one and infinite many are smaller, thus 
+$$
+\prod_{j=1}^{n} (1-\alpha_i (j)) \to 0, \quad n\to \infty.
+$$
+In order to show the outer induction, we show via an inner induction that we can sandwich the sequence $(x(n))_{n \in \mathbb{N}}$ as follows
+\textbf{Inner induction:} For fixed $k$ we have to show that $\forall n \geq \tau_k:$
+$$
+- Y_i (n)+ W_i (n: \tau_k) \leq x_i (n) \leq Y_i (n)+ W_i (n: \tau_k).
+$$
+Induction start: With definition $Y_i (\tau_k) =  D_k$ and $W(\tau_k : \tau_k)=0$ and $|x_i (n)| \leq D_k$ already holds.\\
+Induction Step: Note that we were able to assume w.l.o.g. that $x^*=0$ and thus
+$$
+\|F^n (x(n))\|_\infty \leq \lambda \|x(n)\|_\infty \leq \lambda D_k.
+$$
+It now holds that
+\begin{align*}
+    x_i (n+1) &= (1-\alpha_i (n)) x_i (n) + \alpha_i (n) \left( F^n_i (x(n) )+\epsilon_i (n) + b_i (n) \right) \\
+    &\stackrel{IV}{\leq } (1-\alpha_i (n)) (Y_i (n)+ W_i (n: \tau_k))+ \alpha_i (n) \left( F^n_i (x(n) )+\epsilon_i (n) + b_i (n) \right) \\
+    &\leq (1-\alpha_i (n)) (Y_i (n)+ W_i (n: \tau_k))+ \alpha_i (n) \left( \lambda D_k+\epsilon_i (n) + \|b (n) \|_\infty \right) \\
+    &\leq (1-\alpha_i (n)) (Y_i (n)+ W_i (n: \tau_k))+ \alpha_i (n) \left( \lambda D_k+\epsilon_i (n) + \epsilon D_k \right) \\
+    &=  (1-\alpha_i (n)) Y_i (n)+ \alpha_i (n) \left( \lambda D_k + \epsilon D_k \right) + (1-\alpha_i (n)) W_i (n: \tau_k) +\alpha_i (n) \epsilon_i (n) \\
+    &=  (1-\alpha_i (n)) Y_i (n)+ \alpha_i (n) \left( \lambda  + \epsilon \right) D_k+ W_i (n+1: \tau_k) \\
+    &=  Y_i (n+1)+ W_i (n+1: \tau_k) 
+\end{align*}
+This concludes the inner induction.\\
+We can now finish, with the sandwitch argument. Since $W(n:n_0)$ converges to zero and $Y_i$ converges to $(\lambda +\epsilon )D_k$ it follows that for large $n \geq n_{k+1}$ it holds that
+$$
+\|x(n)\|_\infty \leq  (\lambda +\epsilon) D_{k} + \epsilon D_{k} = (\lambda +2 \epsilon) D_{k} =:D_{k+1},
+$$
+because due to the fact that $W(n:n_0)$ is a zero sequence $\forall \bar{\epsilon}>0$ $\exists N:$ $|W(n:n_0) |\leq \bar{\epsilon}$ $\forall n \geq N$. Here we choose $\bar{\epsilon} = \epsilon D_k$ and $N=:n_{k+1}$.\\
+The outer induction implies  that $\limsup_{n \to \infty} \|x(n)\|_\infty \leq D_k$. Because $D_k$ vanishes, it follows that $\lim_{n \to \infty} \|x(n)\|_\infty =0.$
+
+}
+
+\end{document}

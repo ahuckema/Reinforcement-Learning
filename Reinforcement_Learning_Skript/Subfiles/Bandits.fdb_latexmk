@@ -1,0 +1,16 @@
+# Fdb version 4
+["pdflatex"] 1765643472.14538 "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/Subfiles/Bandits.tex" "Bandits.pdf" "Bandits" 1765643472.31449 2
+  "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/Subfiles/Bandits.tex" 1765642519.70749 62510 92a9a55f99d1e7ace37fca9df3bdf952 ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/import/import.sty" 1586645574 6201 0ad8b5da8e12f60a88d546b2198a56f2 ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/subfiles/subfiles.cls" 1605478891 1507 57de335d88fde4e5c924dfed577fdb74 ""
+  "/usr/local/texlive/2025/texmf-dist/web2c/texmf.cnf" 1739380943 42148 61becc7c670cd061bb319c643c27fdd4 ""
+  "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1741450574 3345740 46b66fdb0378f7bf5921b5eabf1762b8 ""
+  "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
+  "Bandits.aux" 1765643472.14491 32 3985256e7290058c681f74d7a3565a19 "pdflatex"
+  "Bandits.tex" 1765642519.70749 62510 92a9a55f99d1e7ace37fca9df3bdf952 ""
+  "main.tex" 0 -1 0 ""
+  (generated)
+  "Bandits.aux"
+  "Bandits.log"
+  "Bandits.pdf"
+  (rewritten before read)

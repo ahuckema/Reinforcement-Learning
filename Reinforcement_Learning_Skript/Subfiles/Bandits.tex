@@ -1,0 +1,1096 @@
+\documentclass[../main.tex]{subfiles}  % verweist auf die Master‑Datei
+\begin{document}
+
+
+
+
+\section{Two stage stochastic experiments}
+
+Reinforcement learning can be viewed as a two stage experiment.
+\begin{itemize}
+    \item Choose an action according to some distribution (first experiment)
+    \item Given that action, observe a reward according to some distribution (second experiment)
+\end{itemize}
+In most applications the actions are discrete, but rewards are often not discrete.\\
+Let $(X,Y)$ be some pair of random variables on some probability space $(\Omega.\mathcal{F},\mathbb{P})$. Then rewriting the joint distribution we have
+$$
+\mathbb{P}(X=x,Y=y) = \underbrace{\mathbb{P}(X=x\mid Y=y)}_{\text{second step, given the first step}} \underbrace{\mathbb{P}(Y=y)}_{\text{First step}}
+$$
+All of the quantities of $(X,Y)$ can be computed knowing these two probabilities:
+\begin{align*}
+    \mathbb{E}[h(X,Y) ] &= \sum_{x,y} h(x,y) \mathbb{P}(X=x,Y=y) = \sum_{x,y} h(x,y) \mathbb{P}(X=x\mid Y=y) \mathbb{P}(Y=y) \\
+    \mathbb{E}[h(X,Y) \mid Y=y] &= \sum_{x} h(x,y) \mathbb{P}(X=x\mid Y=y)\\
+    \mathbb{E}[h(X,Y) \mid Y] &= \sum_{x,y} h(x,y) \mathbb{P}(X=x\mid Y=y) \textbf{1}_{Y=y} \\
+    \mathbb{P}(X \in \cdot \mid Y) &= \sum_{y} \mathbb{P}(X \in \cdot \mid Y=y) \textbf{1}_{Y=y}
+\end{align*}
+If $Y$ is not discrete, then we cannot compute the conditional probability $\mathbb{P}(X=x\mid Y=y)$, as we would divide by zero.\\
+In order to avoid this we define
+\defn{Markov Kernel}{
+$\kappa (\cdot,\cdot)$ is a Markov kernel, if it is a measure in the second component and measurable in the first.
+}
+A Markov kernel satisfies
+$$
+\mathbb{E}[h(X,Y) \mid Y=y] = \int h(x,y) \kappa (y,dx) \quad \text{and} \quad \mathbb{E}[h(X,Y) \mid Y] = \int h(x,y) \kappa (Y,dx)
+$$
+We also call $\kappa$ the regularized conditional expectation of $X$ given $Y$.\\
+In the discrete case we would write $\kappa (y,A) = \mathbb{P}(X \in A \mid Y=y)$.\\
+The measure $\kappa(y,\cdot)$ has the density
+$$
+\kappa (y,x) = \frac{f_{X,Y}(x,y)}{f_X (x)} f_Y (y)
+$$
+We will avoid the notation of the markov kernels and write
+$$
+\mathbb{P}(X \in A\mid Y=y) := \kappa (y,A)
+$$
+and
+$$
+\mathbb{P}(X \in A\mid Y) := \kappa (Y,A),
+$$
+i.e. we would have
+$$
+\mathbb{E}[h(X,Y) \mid Y] = \int h(x,Y) \mathbb{P}(X \in dx\mid Y)
+$$
+Later, if $X$ and $Y$ are independent then we have that
+$\kappa (y,A) = \mathbb{P}(X \in A)$ such that
+$$
+\mathbb{E}[h(X,Y) \mid Y] = \int h(x,Y) \mathbb{P}(X \in dx)
+$$
+If $X,Y$ are independent then
+$$
+\kappa (Y,dx) = \mathbb{P}_Y (\Omega) \mathbb{P}_X (dx) = \mathbb{P}_X (dx)
+$$
+\section{Introduction of stochastic Bandits}
+The distribution of the outcome of K-arms is given by $P_{a_1},...,P_{a_K}$. The choice that the actor chooses an arm is defined by the random variable $A$ on $\mathcal{A}:=\{a_1,...,a_K\}$. It is very important to note that we assume that the distribution of the arms do not change over time, i.e. they are stationary!
+
+\defn{Policy}{
+A policy is a distribution $\pi $ on $\mathcal{A} := \{a_1,...,a_K\}$. We call the family $\Pi_\Theta:= \{ \pi_\theta \mid \theta \in \Theta \}$ where $\Theta := \{p \in \mathbb{R}^K \mid \sum_{i=1}^K p_i =1, p_i \geq 0 \}$ the family of the policy on a $K-$armed bandit.
+}
+
+
+
+
+
+\defn{Bandit Model}{
+For an index set $\mathcal{A}$ and a family of distributions $\nu := (P_a)_{a \in \mathcal{A}}$ with finite expectation, which we call the reward distribution, we call
+\begin{itemize}
+    \item $\nu$ a stochastic bandit model with $K<\infty$
+    \item The action value as the expectation 
+    $$
+    Q_a := \int_\mathbb{R} x dP_a(x)
+    $$
+    and the best arm as
+    $$
+    a^* \in argmax_{a \in \mathcal{A}} Q_a
+    $$
+    We will write for $Q_{a^*}$ in the future $Q_*$.
+    \item ($n=\infty$ allowed) A learning strategy for n rounds consists of
+    \begin{itemize}
+        \item An initial distribution $\pi_1$ on $\mathcal{A}$
+        \item A sequence $(\pi_t)_{t=2,...,n}$ of kernels on $(\Omega_{t-1}\times \mathcal{A})$, where
+        $$
+        \Omega_t := \{(a_1,x_1,...,a_t,x_t)\in (\mathcal{A}\times \mathbb{R})^t\}
+        $$
+        the set of all trajectories. We will write for the probability of playing arm $a$ at time $t$ given $(a_1,x_1,...,a_t,x_t)$ as
+        $$
+        \pi_t (a; a_1,x_1,...,a_t,x_t).
+        $$
+    \end{itemize}
+\end{itemize}
+}
+The policy can be viewed as our statistical model and the learning strategy are a sequence of elements from this statistical model.\\
+Further, we assume that the $Q_a$ are unknown, but we can sample from it (generative model).\\
+We will later see that learning strategies depend on the maximal time horizon (quite obvious).
+
+
+
+\rmkb{
+We have that $A_1^\pi \sim \pi_1$, for all $t \in \mathbb{N}$: $X_t^\pi \sim \kappa (A_t^\pi (\omega),\cdot) =: P_{A_t^\pi (\omega)}(\cdot) = \sum_{a \in \mathcal{A}} P_a (\cdot) \textbf{1}_{A_t^\pi(\omega)=a}$ and for all $t >1:$
+$$
+A_t^\pi \sim \kappa ((A_1^\pi,X_1^\pi,...,A_{t-1}^\pi,X_{t-1}^\pi)(\omega),\cdot) =: \pi_t (\cdot; A_1^\pi,X_1^\pi,...,A_{t-1}^\pi,X_{t-1}^\pi).
+$$
+Then
+\begin{align*}
+    \mathbb{E}[X_t^\pi] &= \mathbb{E}[ \mathbb{E}[X_t^\pi \mid A_1^\pi,X_1^\pi,...,A_t^\pi] ]\\
+    &=\mathbb{E}[ \int_\mathcal{R} x\; \kappa ( (A_1^\pi,X_1^\pi,...,A_t^\pi),X_t^\pi \in dx ) ] \\
+    &=\mathbb{E}[ \int_\mathcal{R} x\; \sum_{a \in \mathcal{A}} \textbf{1}_{A_t^\pi =a} P_a(dx)] \\
+    &=\mathbb{E}[\sum_{a \in \mathcal{A}} \textbf{1}_{A_t^\pi =a} Q_a] \\
+    &=\sum_{a \in \mathcal{A}} \mathbb{P}(A_t^\pi =a) Q_a 
+\end{align*}
+}
+
+
+
+
+
+\defn{Types of Learning strategies}{
+A learning strategy is called an index strategy, if all measures are dirac measures, i.e. one arm is always played with probability one.\\
+A learning strategy is called soft, if all measures have probability strictly greater than zero for all arms.
+}
+Next, we define a stochastic bandit process (analogously to Markov chains, where we first introduced transitions matrices and then then defined a Markov Chain and proved its existence.
+
+
+\defn{Stochastic Bandit Process}{
+Consider a stochastic Bandit model $\nu$ and a learning strategy $\learnstrat$ for n rounds. Then a stochastic bandit process $(A^\pi_t,X^\pi_t)_{t=1,...,n}$ on some $(\Omega,\mathcal{F},\mathbb{P})$ is called a stochastic bandit process with learning strategy $\pi$, if
+\begin{itemize}
+    \item $A_1^\pi \sim \pi_1$
+    \item $\mathbb{P}(A^\pi_t = a \mid A^\pi_1,X^\pi_1,...,A^\pi_{t-1},X^\pi_{t-1}) = \pi(a; A^\pi_1,X^\pi_1,...,A^\pi_{t-1},X^\pi_{t-1})$, $a \in \mathcal{A}$
+    \item $\mathbb{P}(X^\pi_t \in B \mid A^\pi_1,X^\pi_1,...,A^\pi_{t}) = \sum_{a \in \mathcal{A}} \underbrace{P_a (B)}_{=\mathbb{P}(X^\pi_t \in B \mid A_t^\pi =a)} \textbf{1}_{A_t^\pi = a} =: P_{A^\pi_t} (B)$, $B \in \mathcal{B}(\mathcal{R})$
+\end{itemize}
+}
+The interpretation of the second and third property, is that the actions depend on the past, but the rewards do not depend on the past! Only on the last action taken.\\
+In words: A stochastic bandit process is a stochastic process that, first, given a learning strategy $\pi$ in every round this learning strategy suggests probabilities for actions that are based on the past. Then, the sampled arm $A^\pi_t$ is used to play the corresponding arm and observe the outcome $X^\pi_t$.\\
+It is not clear, that such a probability space exists, that satisfies these conditions for the sotchastic bandit Process:
+
+\thm{Existence of stochastic Bandit Process}{
+For every bandit model and every learning strategy $\learnstrat$ there exists a corresponding stochastic bandit process $(A^\pi,X^\pi)$.
+}
+\pf{
+Existence:\\
+Let $(X_t^{(a)})_{a \in \mathcal{A} ,t \in \mathbb{N}}$ be a table of independent random variables such that
+$$
+\forall t\in \mathbb{N}, a \in \mathcal{A}: X_t^{(a)} \sim P_a
+$$
+and let $U_1,U_2,... \stackrel{iid}{\sim} \mathcal{U}([0,1])$. Then with the Kolmogorov extension theorem, there exists some joint probability space $(\Omega, \mathcal{F},\mathbb{P})$.\\
+We will now use $(U_t)_{t \in \mathbb{N}}$ to construct the $(A_t^\pi)_{t \in \mathbb{N}}$. For this let $\learnstrat$ be a learning strategy. Construction via induction:\\
+Remember that we can use uniformly distributed random variables to sample from discrete random variables. \\
+$t=1$:\\
+$$
+I_k := [ \sum_{i=1}^{k-1} \pi_1 (a_i) , \sum_{i=1}^{k} \pi_1 (a_i)  ]
+$$
+an interval of length $\pi_1 (a_k) $ and $\bigcup_{k=1}^K I_k$ is a partition of $[0,1]$. Then
+$$
+\bar{U} (U_1) := \sum_{k=1}^K a_k \textbf{1}_{U_1 \in I_k } \sim \pi_1.
+$$
+Now define $A_1^\pi := \bar{U}(U_1)$ and clearly
+$$
+X_1^{(A_1^\pi)} \sim \sum_{a \in \mathcal{A}} P_a \textbf{1}_{A_1^\pi =a}
+$$
+then set $X_1^{(A_1^\pi)} =: X_1^\pi$.\\
+$t\rightarrow t+1:$
+Now we define for an entire sequence of $(A_1^\pi,X_1^\pi,...,X_{t-1}^\pi)$ the distribution $\pi_t (\cdot \mid A_1^\pi,...,X_{t-1}^\pi)$ by defining first
+$$
+I_t (A_1^\pi,...,X_{t-1}^\pi) := \bigcup_{k=1}^K I_t^{(a_k)} 
+$$
+where
+$$
+\forall k=1,...,K: I_t^{(a_k)}  := [\sum_{i=1}^{k-1} \pi_t (a_{i}; A_1^\pi,...,X_{t-1}^\pi),\sum_{i=1}^k\pi_t (a_{i}; A_1^\pi,...,X_{t-1}^\pi)],
+$$
+i.e. $I_t^{(a_k)} $ is an interval of length $\pi_t (a_{k}; A_1^\pi,...,X_{t-1}^\pi)$ and $I_t (A_1^\pi,...,X_{t-1}^\pi)$ is a partition of $[0,1]$.
+
+Finally, we have that 
+$$
+\bar{U}(U_{t}) := \sum_{k=1}^K a_k \textbf{1}_{U_t \in I_t^{(a_k)} } \sim \pi_t (\cdot; A_1^\pi,...,X_{t-1}^\pi) , \quad t=2,...,n.
+$$
+Now we can use $\bar{U}(U_{t+1})$ to sample from $\pi_{t+1} (\cdot; A_1^\pi,...,X_{t}^\pi)$ and set $A_{t+1}^\pi := \bar{U}(U_{t+1})$. Then, again
+$$
+X_{t+1}^{(A_{t+1}^\pi)} \sim \sum_{a \in \mathcal{A}} P_a \textbf{1}_{A_{t+1}^\pi =a}.
+$$
+and set $X_{t+1}^{(A_{t+1}^\pi)} =: X_{t+1}^\pi$.\\
+Properties:\\
+Wrapping up, we now need to show the two properties of the stochastic bandit model for all $t=1,...,n$. Before we do this, note that, because $(U_t)_{t \in \mathbb{N}}$ is an iid sequence and we used this for the construction of $(A_t^\pi)_{t \in\mathbb{N}}$ and because $(X_t^{(a)})_{a \in \mathbb{N},a \in \mathbb{N}}$ are by definition independend in both components, it holds that for all $t=1,...,n$ and all $a \in \mathcal{A}$ that the conditional distribution
+$$
+\mathbb{P}(U_t \in \cdot \mid A_1^\pi =a_1,...,X_{t-1}^\pi =x_{t-1}) = \mathbb{P} (U_t \in \cdot ) = \lambda (\cdot),
+$$
+where $\lambda$ is the Lebesgue measure. Further, note that because we defined the $\pi_t (\cdot \mid A_1^\pi,..,X_{t-1}^\pi)$ using absolute continuous random variables, it is a Markov kernel, i.e.
+$$
+\kappa (a_1,...,x_{t-1}, \cdot) = \mathbb{P}(U_t \in \cdot \mid A_1 =a_1,...,X_{t-1} =x_{t-1}).
+$$
+Now we can show the two properties for all $t=1,...,n$
+\begin{itemize}
+    \item [1)] 
+    \begin{align*}
+        \mathbb{P}(A_t =a \mid A_1^\pi,...,X_{t-1}^\pi) &= \mathbb{P}( \bar{U}(U_t) =a \mid A_1^\pi,...,X_{t-1}^\pi) \\
+        &= \mathbb{P}( U_t \in I_t^{(a)} \mid A_1^\pi,...,X_{t-1}^\pi) \\
+        &= \mathbb{E}[ \textbf{1}_{U_t \in I_t^{(a)}} \mid  A_1^\pi,...,X_{t-1}^\pi]\\
+        &= \int \textbf{1}_{u \in I_t^{(a)}}  \mathbb{P}( U_t \in du \mid A_1^\pi,...,X_{t-1}^\pi)\\
+        &= \int \textbf{1}_{u \in I_t^{(a)} }  \mathbb{P}( U_t \in du )  \\
+        &= \int \textbf{1}_{u \in I_t^{(a)} }   du   \\
+       & = \lambda(I_t^{(a)} )\\
+       &\stackrel{Def}{=} \pi_t (a;A_1^\pi,...,X_{t-1}^\pi)
+    \end{align*}
+    Note that we were allowed to use the indepence of the kernel due to the fact that $du$ does not depened on $A_1^\pi,X_1^\pi,...$, but $I_t^{(a)}$ does.
+    \item [2)] For $B \in \mathcal{B}(\mathcal{R})$
+    \begin{align*}
+        \mathbb{P} (X_t^\pi \in B \mid A_1^\pi,X_1^\pi,...,A_t^\pi) &= \sum_{a \in \mathcal{A}} \mathbb{P} (X_t^{(A_t^\pi)} \in B, A_{t}^\pi =a \mid A_1^\pi,X_1^\pi,...,A_t^\pi) \\
+        &= \sum_{a \in \mathcal{A}} \mathbb{P} (X_t^{(a)} \in B, A_{t}^\pi =a \mid A_1^\pi,X_1^\pi,...,A_t^\pi) \\
+        &= \sum_{a \in \mathcal{A}} \mathbb{E} [\textbf{1}_{X_t^{(a)} \in B} \textbf{1}_{A_{t}^\pi =a} \mid A_1^\pi,X_1^\pi,...,A_t^\pi] \\
+        &\stackrel{measb.}{=} \sum_{a \in \mathcal{A}} \textbf{1}_{A_{t}^\pi =a}\mathbb{E} [\textbf{1}_{X_t^{(a)} \in B}  \mid A_1^\pi,X_1^\pi,...,A_t^\pi] \\
+        &\stackrel{ind.}{=} \sum_{a \in \mathcal{A}} \textbf{1}_{A_{t}^\pi =a}\mathbb{E} [\textbf{1}_{X_t^{(a)} \in B} ] \\
+        &\stackrel{ind.}{=} \sum_{a \in \mathcal{A}} \textbf{1}_{A_{t}^\pi =a}\mathbb{P} (X_t^{(a)} \in B) \stackrel{Def}{=} P_{A_t^\pi}(B).
+    \end{align*}
+\end{itemize}
+}
+
+We can have two optimization goals
+\begin{itemize}
+    \item [(A)] For fixed $n \in \mathbb{N}$ find a learning strategy $\learnstrat$ such that it maximizes
+    $$
+    \mathbb{E}[\sum_{i=1}^n X_t^\pi]
+    $$
+    \item [(B)] For fixed $n \in \mathbb{N}$ find a learning strategy, that minimizes the probability of choosing the wrong arm, i.e. 
+    $$
+    \pi^* \in argmin_\pi \mathbb{P}(A^\pi_t \neq a^*).
+    $$
+    If this holds for all $t$ or only the last or some, is not predefined.
+\end{itemize}
+We will first do $(A)$. Note first that there might be several best arms. In that case, it does not matter which of the best arms we choose. Second, 
+$$
+\max_\pi \mathbb{E}[\sum_{t=1}^n X_t^\pi] = \min_\pi (nQ_* - \mathbb{E}[\sum_{t=1}^n X_t^\pi])
+$$
+
+\defn{Regret}{
+Suppose $\nu$ is a bandit model and $\learnstrat$ is a learning strategy, then the culmmulateted regret is defined as
+$$
+R_n (\pi) := n Q_* - \mathbb{E}[\sum_{t=1}^n X_t^\pi].
+$$
+}
+It describes how much is lost, when not playing optimally. Now a natural question is: What is a good and a bad learning strategy?\\
+We get linear regret when our learning strategy is in all times steps the uniform distribution, i.e. $\pi_i \stackrel{(d)}{=} \pi_1 \stackrel{(d)}{=} \mathcal{U}([0,1])$. Then we have
+$$
+R_n (\pi) = nQ_* - n \mathbb{E}[X_1^\pi] =n \underbrace{(Q_* - \frac{1}{K} \sum_{k=1}^K Q_{a_k})}_{=const\geq 0})
+$$
+Therefore, we want the regret to grow slower than linear.
+\defn{Reward Gab}{
+We define the reward gab of arm a as the difference between the Q value of the optimal and arm a, i.e.
+$$
+\Delta_a := Q_* - Q_a.
+$$
+}
+We do not want to have that bounds of the regret for algorithm depend on the Q vaules, as they are in theory unknown. It is a little more reasonable that the regret bounds depend on the reward gabs. Often the bounds depend on the time horizon $n$. There are model free bounds, which do not depend on the bandit model $\nu$ and there are model based bounds, that depend on the bandit model $\nu$, i.e. the rewards gabs, Q-Values or variance. \\
+We will see that finding alorithms, that have model based upper bounds that are logarithmic in $n$ are not that hard to find. But they depend on $\Delta_a$. If now the reward Gab of the best and second best arm is arbitrary small, then we will see that this upper bound explodes, which is not so ideal, especially if $n$ is finite. For the UCB algorithm we will get two regret bounds that look something like
+$$
+R_n (\pi) \leq const. \sqrt{ n \log(n)} + const. \sum_{a \in \mathcal{A}} \Delta_a\quad \text{ and }\quad R_n (\pi) \leq const. \log(n) \sum_{a \neq a^*} \frac{1}{\Delta_a} + const.  \sum_{a \in \mathcal{A}} \Delta_a.
+$$
+the second bound is better in $n \to \infty$, but for finite $n \in \mathbb{N}$ the constants can dominate large $n$, because $\frac{1}{\Delta_a}$ can be huge! Here the first bound comes into play, where the constants are smaller, but its performance for $n \to \infty$ is worse. As it might not be very realistic in practical situations to have infinite samples, for finite $n \in \mathbb{N}$ the first bound is sharper for small $n$ and the second is sharper for large $n$.\\
+It is also very important to note that, if we know that the arms are of a particular distribution then we can bound the reward Gab by above. For instance if we have Bernulli arms $P_a \stackrel{(d)}{=} Ber(p_a)$, then
+$$
+\Delta_a = Q_* -Q_a \leq 1. 
+$$
+This can be very beneficial!
+\rmkb{
+What is the practical benefit of calculating these upper regret bounds? Well first, they give us haranteed performance bounds and as we will later see (explore then commit algorithm) these bounds will depend on different parameters of the appearing algorithms and thus can be used, to tune parameters to improve performance!
+}
+A very important tool in calculating the upper regret bounds will be the following.
+\lem{Regret Decomposition Lemma}{
+For the number of times arm a was played $T_a (n) := \sum_{t=1}^n \textbf{1}_{A_t=a}$ we can write the regret of policy $\pi$ after n rounds as
+$$
+R_n (\pi) = \sum_{a \in \mathcal{A}} \Delta_a \mathbb{E}[T_a (n)].
+$$
+}
+\pf{
+We begin by rewriting
+\begin{align*}
+    R_n (\pi) = n Q_* - \mathbb{E}[\sum_{t=1}^n X_t^\pi] &= \sum_{t=1}^n \mathbb{E} [ Q_* - X_t^\pi]\\
+    &=\sum_{t=1}^n \sum_{a \in \mathcal{A}} \mathbb{E} [( Q_* - X_t^\pi)\textbf{1}_{A_t^\pi=a}]
+\end{align*}
+Now using the tower property, i.e. for every two random variables $X,Y$ we have that
+$$
+\mathbb{E}[X] = \mathbb{E}[\mathbb{E}[X \mid Y]],
+$$
+we get that for every $t\leq n$ and $a \in \mathcal{A}$ we have that
+\begin{align*}
+    \mathbb{E} [( Q_* - X_t^\pi)\textbf{1}_{A_t^\pi=a}] &=\mathbb{E}_\pi [\mathbb{E}[( Q_* - X_t^\pi)\textbf{1}_{A_t^\pi=a} \mid A_1^\pi,X_1^\pi,...,A_t^\pi ]] \\
+    &= \mathbb{E} [\textbf{1}_{A_t^\pi=a} \mathbb{E}_\pi[( Q_* - X_t^\pi) \mid A_1^\pi,X_1^\pi,...,A_t^\pi ]] \\
+    &= \mathbb{E} [\textbf{1}_{A_t^\pi=a} (Q_* -\mathbb{E}[X_t^\pi \mid A_1^\pi,X_1^\pi,...,A_t^\pi ])] \\
+    &= \mathbb{E} [\textbf{1}_{A_t^\pi=a} (Q_* -\int x \mathbb{P}(X_t^\pi \in dx\mid A_1^\pi,X_1^\pi,...,A_t^\pi  ) )] \\
+    &\stackrel{(*)}{=} \mathbb{E} [\textbf{1}_{A_t^\pi=a} (Q_* -\int x dP_{A_t^\pi} (x) )] \\
+    &= \mathbb{E} [\textbf{1}_{A_t^\pi=a} (Q_* -Q_{A_t^\pi})] \\
+    &= \mathbb{E} [\textbf{1}_{A_t^\pi=a} (Q_* -Q_{a})] \\
+    &= \Delta_a \mathbb{E} [\textbf{1}_{A_t^\pi=a} ] = \Delta_a \mathbb{E}_\pi [T_n (a)]
+\end{align*}
+Although, we used in (*) the third condition of the stochastic bandit process, i.e. $(X^\pi_t \mid A_1^\pi,X_1^\pi,...,A_t^\pi) \sim P_{A_t^\pi}$. This finally leads to
+$$
+R_n (\pi) = \sum_{t=1}^n \sum_{a \in \mathcal{A}} \Delta_a \mathbb{E} [\textbf{1}_{A_t^\pi=a} ] = \sum_{a \in \mathcal{A}} \Delta_a \mathbb{E} [\sum_{t=1}^n \textbf{1}_{A_t^\pi=a}].
+$$
+}
+The regret is therefore the sum over all reward gabs and weighted by the expected number of times we play the respective arm.
+\defn{Failure Probability}{
+We define the probability that an suboptimal arm is chosen at time t as
+$$
+\tau_t (\pi) := \mathbb{P}_\pi (Q_* \neq Q_{A_t})
+$$
+which we call the failure probability.
+}
+It is clearly desirable that this probability converges to zero as fast as possible. Note that this is the optimization goal of (B). This is typically not done in stochastic bandits, but rather in reinforcement learning. But this also connects very well to the regret. Note that we can write
+$$
+\mathbb{E}_\pi [T_n (a)] = \sum_{t=1}^n \mathbb{P}_\pi (A_t =a)
+$$
+and then the regret decomposition lemma leads to the following result
+\lem{}{
+We can rewrite the regret as
+$$
+R_n (\pi) = \sum_{t=1}^n \sum_{a \in \mathcal{A}} \Delta_a \mathbb{P}_\pi (A_t =a)
+$$
+and get the bounds
+$$
+R_n (\pi) \leq \max_{a \in \mathcal{A}} \Delta_a \sum_{t=1}^n \tau_t (\pi) \quad \text{and} \quad R_n (\pi) \geq \min_{a \neq a_*} \Delta_a \sum_{t=1}^n \tau_t (\pi)
+$$
+}
+This shows that studying the failure probability and the regret are ultimately connected. \\
+Note that the upper bound is quite trivial:
+$$
+R_n (\pi) = \sum_{t=1}^n \underbrace{\sum_{a \in \mathcal{A}} \Delta_a \mathbb{P}_\pi (A_t =a)}_{=\sum_{a \neq a^*} \Delta_a \mathbb{P}_\pi (A_t=a)}  \leq \sum_{t=1}^n \underbrace{\mathbb{P}_\pi (A_t\neq a^*)}_{=\tau_t (\pi)} \max_{a \in \mathcal{A}} \Delta_a.
+$$
+If we would have an integral instead of a sum, then with the fundamental theorem of integration theory, we have that
+$$
+\int_0^n \tau_t (\pi) dt =: Tau_0(\pi) - Tau_n (\pi), \quad Tau_t^\prime (\pi) = \tau_t (\pi).
+$$
+I.e. the failure probability describes the rate at which the regret upper bound changes (in approximation).
+\rmkb{
+The following two result will be important, for later 
+\begin{itemize}
+    \item If the failure probability does not decay to zero, then we have linear regret
+    \item If the failure probability behaves like $\frac{1}{t}$ then we have that
+    $$
+    \sum_{t=1}^n \tau_t (\pi) \leq \int_0^n \frac{1}{t} dt = \log (n).
+    $$
+\end{itemize}
+}
+
+\section{Algorithms: the exploration-exploitation trade-off}
+
+\subsection{Basic committ-then-exploit algorithm}
+We first recall the law of large number, where for iid random varibales
+$$
+\frac{1}{n}\sum_{t=1}^n Y_t \to \mathbb{E}[Y_1], n\to \infty.
+$$
+
+\defn{Estimated action Value}{
+For a stochastic bandit process $(A^\pi,X^\pi)$ and a learning strategy $\pi$ we define
+$$
+\hat{Q}_a (t) := \frac{1}{T_a (t)} \sum_{k=1}^t \textbf{1}_{A_k=a} X_k^{(a)}
+$$
+the estimated action value.
+}
+Using the LLN the basic explore then commit algorithm is that we play $m$ times every arm and the remaining $n-mK$ rounds play the best arm.  \\
+If we play an arm $a$ infinitely often, then
+$$
+\lim_{ t \to \infty} \hat{Q}_a (t) = \lim_{t \to \infty}\frac{1}{t} \sum_{k=1}^t \textbf{1}_{A_k =a} X_k^{(a)},
+$$
+But in general it does not hold for a learning strategy $\pi$, that $T_a (t) $ goes to infinity for every action.\\
+For the explore then commit algorithm, we have clearly the following index strategy
+$$
+\pi_t (a;a_1,x_1,...,x_{t-1}) = \begin{cases}
+    1& t\leq Km, a=a_{t mod K+1} \\
+    1& t > Km, a = argmax_a \hat{Q}(Km) \\
+    0 & else
+\end{cases}
+$$
+where $\hat{Q}(t) := (\hat{Q}_1 (t),...,\hat{Q}_K (t))$.
+
+\begin{algorithm}[H]
+\caption{Explore then Commit}
+    Data: $m,n$, bandit model $\nu$ \;
+    Set $\hat{Q}(0)\equiv 0$ \;
+    \While {$t\leq n$}{
+    Set $A_t = \begin{cases}
+        a_{t mod K+1} & t\leq mK\\
+        argmax_a \hat{Q}_a (mK) &t>mK
+    \end{cases}$  \;
+    Set Obtain reward $X_t$ by playing arm $A_t$ \;
+    }
+    Output: Actions $A_1,...,A_n$ and rewards $X_1,...,X_n$ 
+\end{algorithm}
+\rmkb{In the first $mK$ rounds we cycle through the $K$ arms. After that we take the best arm, at time $mK$ for all the other rounds. \\Very important: We do not update the Q-Value in exploitation phase, i.e. we do not have a greedy algorithm. If we would update the Q-value in the exploitation phase it would be called, explore then greedy. But we only consider explore then commit!}
+
+
+This algorithm produces the following regret bound
+
+\defn{$\sigma$-Subgaussian}{
+A random variable $X$ on a probability space $(\Omega,\mathcal{F},\mathbb{P})$ is called $\sigma-$Subgaussian for $\sigma >0$, if for all $\lambda \in \mathbb{R}$ it holds that
+$$
+\mathcal{M}_{X - \mathbb{E}[X]} (\lambda) := \mathbb{E}[e^{\lambda (X-\mathbb{E}[X])}] \leq e^{\lambda^2 \sigma^2/2}.
+$$
+}
+
+\lem{Regret Bound for explore then commit}{
+For a $\sigma$-Subgaussian bandit model $\nu$ and the learning strategy $\pi$ that follows the explore then commit algorithm, i.e. we play m times every arm and then $n-mK$ times the best arm, it holds
+$$
+R_n (\pi) \leq m \sum_{a \in \mathcal{A}} \Delta_a + (n-mK) \sum_{a \in \mathcal{A}} \Delta_a e^{\frac{\Delta_a^2 m}{4 \sigma^2}} 
+$$
+}
+The summand of the form $\sum_{a \in \mathcal{A}} \Delta_a$ must appear in every reasonable regret bound for learning strategies, that explore the presented arms.\\
+In the explore then commit algorithm it is clear that for $m$ large enough we should have $\hat{Q}_a (m) \approx Q_a (n)$ and thus the we should choose the best arm, after the exploration. But some arms could be overestimated in the sense that their rewards after $m$ rounds are above average. In that case the algorithm could choose an arm that is suboptimal. This overestimation can be explained using concentration inequalities: \\
+A concentration inequality is a bound of the probability, that the random variable deviates from its mean
+$$
+c(a) \leq \mathbb{P}(|X-\mathbb{E}[X]|>a) \leq C(a) \quad \text{ or }\quad c(a) \leq \mathbb{P}(X-\mathbb{E}[X]>a) \leq C(a)
+$$
+The faster the functions $C(a),c(a)$ decrease, the more the random variable $X$ is concentrated. A similiar way of viewing this is saying that for a strongly increasing function $g$ the expectation
+$$
+\mathbb{E}[g(X)] = \begin{cases}
+    \int_\mathbb{R} g(y) f_X (y ) dy &, \text{$X$ is continuous}\\
+    \sum_{k=1}^N g(a_k)P_k &, \text{$X$ is discrete}
+ \end{cases}
+$$
+exists if and only if, $X$ is concentrated, i.e. the density $f_X$ (or probability weights $p_k$) force the product to decrease very strongly!\\
+A concentration inequality we already know is the Markov inequality
+$$
+\mathbb{P}(|X-\mathbb{E}[X]|>a) \leq \frac{\mathbb{V}[X]}{a^2}, \quad \mathbb{E}[X^2]<\infty.
+$$
+But this inequality is not very sharp, i.e. the upper bound is useless. For $\sigma$-Subgaussian random variables we can find a lot more sharper bounds. This will be done now and is a necessary result in order to derive the regret bound for the explore then commit algorithm.
+
+
+\prop{
+Let $X$ be a $\sigma$-Subgaussian, then it holds for all $a>0$:
+$$
+\mathbb{P}(X \geq a) \leq e^{-\frac{a^2}{2 \sigma^2}} \quad \text{and} \quad \mathbb{P}( |X| \geq a) \leq 2e^{-\frac{a^2}{2 \sigma^2}}
+$$
+}
+\pf{
+The idea is to use exponential Markov inequality. For $\lambda \in \mathbb{R}$ 
+\begin{align*}
+    \mathbb{P}(X \geq a)  &= \mathbb{P}(\lambda X \geq \lambda a) = \mathbb{P}(e^{\lambda X} \geq e^{\lambda a}) \\
+    &\leq \frac{\mathbb{E}[e^{\lambda X}]}{e^{\lambda a}} \\
+    &= \frac{e^{\frac{\lambda^2 \sigma^2}{2}}}{e^{\lambda a}} = e^{\frac{\lambda^2 \sigma^2}{2}- \lambda a} =: h(\lambda)
+\end{align*}
+One can show that $h$ is minimized by $\lambda^*=\frac{a}{\sigma^2}$ using differentiation. This leads to our bound.\\
+The second case is analogously, although we first write
+$$
+\mathbb{P}(|X|\geq a) = \mathbb{P}(X \geq a \text{ or } X \leq -a) = \mathbb{P}(X\geq a) + \mathbb{P}(-X \geq a).
+$$
+This yields the assertion, because we showed that for any constant $c$ then $cX$ is $|c|\sigma$-Subgaussian.\\
+}
+\lem{}{
+For a $\sigma$-Subgaussian random variable we have
+\begin{itemize}
+    \item $\mathbb{V}[X]\leq \sigma^2$
+    \item For a constant $c$ it holds
+    $cX$ is $|c|\sigma$-Subgaussian
+    \item If $X_1,X_2$ are independent $\sigma_1,\sigma_2$-Subgaussian (respectively) random variables, then $X_1+X_2$ are $\sqrt{\sigma^2_1+\sigma^2_2}$-Subgaussians.
+    \item ...
+\end{itemize}
+}
+
+Now what follows is called concentration inequalities.
+\thm{Höffdings Inequality}{
+Suppose we have $X_1,X_2,...$ iid random variables on $(\Omega,\mathcal{F},\mathbb{P})$ with $\mu:=\mathbb{E}[X_1]$ and $X_1$ is $\sigma$-Subgaussian, then for all $n \in \mathbb{N}$ and all $a>0$,
+$$
+\mathbb{P} \left( \frac{1}{n} \sum_{i=1}^n X_i - \mu \geq a \right) \leq e^{-\frac{na^2}{2 \sigma^2}} \quad \text{and} \quad \mathbb{P} \left(| \frac{1}{n} \sum_{i=1}^n X_i - \mu | \geq a \right) \leq 2e^{-\frac{na^2}{2 \sigma^2}}
+$$
+}
+\pf{
+We only need to look at how the $\sigma$ looks like for the Subgaussian. We have shown, that $\sum_{i=1}^n X_i$ is $\sqrt{\sum_{i=1}^n \sigma^2} = \sqrt{n} \sigma$-Subgaussian. Then $\frac{1}{n} \sum_{i=1}^n X_i$ is $\frac{\sigma}{\sqrt{n}}$-Subgaussian and the assertion immediately follows from the previous Proposition.
+}
+
+Now we have derived all tools we need in order to prove the Regret bound for ETC:
+\pf{
+Without loss of generality we can assume that the first arm is the best arm, i.e. $Q_{a_1}=Q_*$. Next, we can rewrite for $c \in \mathbb{N}$ with $c<n-mK$
+\begin{align*}
+T_a (n) &= m + (n-mK) \textbf{1}_{\text{arm a is the best arm at mK }}\\
+&= m + (n-mK) \textbf{1}_{\hat{Q}_a (mK) \geq \max_b \hat{Q}_b (mK)}
+\end{align*}
+Thus we can write the regret as
+\begin{align*}
+    R_n (\pi) &= \sum_{a \in \mathcal{A}} \Delta_a \mathbb{E}[T_a(n)] =  \sum_{a \in \mathcal{A}} \Delta_a \left(m + (n-mK) \mathbb{P}(\hat{Q}_a (mK) \geq \max_b \hat{Q}_b (mK))\right) \\
+    &=\sum_{a \in \mathcal{A}} \Delta_a m + \sum_{a \in \mathcal{A}} \Delta_a (n-mK) \mathbb{P}(\hat{Q}_a (mK) \geq \max_b \hat{Q}_b (mK)) \\
+\end{align*}
+We can estimate the probability by above if we replace the maximum by an arbitrary arm. We choose it to be the best arm $a_1$. Note: $Q_{a_1}=Q_*$ but this does not mean that $a_1 \in argmax_b \hat{Q}_b$. This leads to
+\begin{align*}
+    R_n (\pi)&=\sum_{a \in \mathcal{A}} \Delta_a m + \sum_{a \in \mathcal{A}} \Delta_a (n-mK) \mathbb{P}(\hat{Q}_a (mK) \geq \max_b \hat{Q}_b (mK)) \\
+    &\leq \sum_{a \in \mathcal{A}} \Delta_a m + \sum_{a \in \mathcal{A}} \Delta_a (n-mK) \mathbb{P}(\hat{Q}_a (mK) \geq  \hat{Q}_{a_1} (mK)) \\
+    &\leq \sum_{a \in \mathcal{A}} \Delta_a m + \sum_{a \in \mathcal{A}} \Delta_a (n-mK) \mathbb{P}(\hat{Q}_a (mK) -\hat{Q}_{a_1} (mK)) - (Q_a -Q_{a_1}) \geq  \underbrace{(Q_a -Q_{a_1})}_{=\Delta_a} )
+\end{align*}
+I.e. inside the probability we have written something in the form of
+$$
+Z_a := \frac{1}{m} \sum_{i=1}^m (X_j^{(a)} - X_j^{(1)}) \quad \text{and} \quad \mathbb{P} (Z_a - \mathbb{E}[Z_a] \geq \underbrace{\mathbb{E}[Z_a]}_{=\Delta_a})
+$$
+We now want to use Höffdings Inequality. Because $X_j^{(a)} - X_j^{(1)}$ is a sequence of iid random variables and their sum is a $\sqrt{2} \sigma$ Subgaussian r.v., we get 
+$$
+\mathbb{P} (Z_a - \mathbb{E}[Z_a] \geq \Delta_a) \leq e^{-\frac{m \Delta_a^2}{2 (\sqrt{2}\sigma)^2}} = e^{-\frac{m \Delta_a^2}{4\sigma^2}}
+$$
+}
+
+\cor{
+For a two armed bandit the upper bound for the regret of the explore then commit algorithm is minimized by
+$$
+m = \max\{1, \lceil \frac{4\sigma^2}{\Delta} \log \left(\frac{n\Delta^2}{4\sigma^2} \right) \rceil\}.
+$$
+}
+\pf{
+When we have only two arms then $\Delta := \Delta_2$ and $\Delta_1 =0$ (in the case that the first arm is optimal). It follows
+$$
+R_n(\pi) \leq m \Delta + (n-2m) \Delta e^{-\frac{m \Delta^2}{4 \sigma^2}}.
+$$
+Differentiation gives the assertion.
+}
+Thus the best algorithm in the class of explore then commit algorithms with two arms
+\cor{
+For a two armed bandit with optimized exploration the upper bound for the regret of the explore then commit algorithm is given by
+$$
+R_n (\pi) = \min \left\{ n \Delta,\Delta + \frac{4 \sigma^2}{\Delta} (1+ \max \{0, \log (\frac{n \Delta^2}{4 \sigma^2})\}) \right\}
+$$
+and for $n\geq \frac{4}{\Delta^2}$ we have the model dependend regret bound
+$$
+R_n (\pi) \leq C_\Delta + \frac{\log(n)}{\Delta}
+$$
+}
+\pf{
+---
+}
+
+\rmkb{
+The big question is wether the optimal chosen $m$ is reasonable? The answer is no, because it is cheating! We use information we do not have, i.e. the Reward Gabs and the $\sigma$ might also be unknown. One could derive algorithms, that sample from these two parameters, but this is questions, that will not be answered here.
+}
+
+\subsection{Purely Greedy}
+
+Before we begin, we can show that we can write the Q value in a specific way, such that we get a iterative way of writing it. For every arm $a \in \mathcal{A}$ and $n \in \mathbb{N}$ we assume that $T_a (n) =n$
+\begin{align*}
+    \hat{Q}_a (n) &= \frac{1}{n} \sum_{t=1}^n X_t^{(a)} \\
+    &= \frac{1}{n} (X_n^{(a)}+ \sum_{t=1}^{n-1} X_t^{(a)} ) \\
+    &= \frac{1}{n} (X_n^{(a)}+ \frac{n-1}{n-1} \sum_{t=1}^{n-1} X_t^{(a)} ) \\
+    &= \frac{1}{n} (X_n^{(a)}+ (n-1) \hat{Q}_a (n-1)) \\
+    &= \hat{Q}_a (n-1) + \frac{1}{n} (X_n^{(a)} -\hat{Q}_a (n-1))
+\end{align*}
+This is similar to stochastic gradient descent, because we can view this as "old Q value + learning rate $\frac{1}{n}$ times the gradient of a loss function (distance of current rewards vs. estimated old reward)".\\
+\rmkb{
+We call an algorithm that uses an vector that is updated in each step in order to make decisions tabular. Later a similiar approach as the above will be Q-learning.
+}
+The purely greedy algorithm always plays the action at time $t$ with the highest estimated $Q$-Value, i.e. $A_t := argmax_a \hat{Q}_a (t-1)$. The trick of this algorithm is to choose the ininilized $Q$-value as very large, because then we force exploration. But the question is, what is large?
+
+
+\begin{algorithm}[H]
+\caption{Purely greedy bandit algorithm}
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{bandit model $\nu$, vector $\hat{Q}$, $n$}
+Initialise $T_a = 0$ for all $a$;\\
+\While{$t \leq n$}{
+    Set $A_t = \arg\max_a \hat{Q}_a$;\\
+    Obtain reward $X_t$ by playing arm $A_t$;\\
+    Set $T_{A_t} = T_{A_t} + 1$;\\
+    Set $\hat{Q}_{A_t} = \hat{Q}_{A_t} + \frac{1}{T_{A_t}} (X_t - \hat{Q}_{A_t})$;\\
+}
+\Output{actions $A_1, \dots, A_n$ and rewards $X_1, \dots, X_n$}
+\end{algorithm}
+Problems with this algorithm is the committal behavior
+\defn{Committal Behavior}{
+When a Bandit focuses to early on a suboptimal arm, is called comittal behavior.
+}
+
+A second way of forcing exploration is by centering all the arms (empirically). Bad arms will then get negative $\hat{Q}$ values and good arms will get positive ones. Again, here is the problem that we need to sample from the arms a few times, in order to calculate the empirical mean and variance. Finally, we still have positive probability of commital behavior.
+
+\subsection{$\epsilon$-greedy bandit algorithms}
+
+\begin{algorithm}[H]
+\caption{$\varepsilon$-greedy bandit algorithm}
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{bandit model $\nu$, exploration rate $\varepsilon \in (0,1)$, vector $\hat{Q}$, $n$}
+
+Initialise $T_a = 0$ for all $a$;\\
+\While{$t \leq n$}{
+    Sample $U \sim \mathcal{U}([0,1])$;\\
+    \eIf{$U < \varepsilon$}{
+        \textbf{[exploration part]}\\
+        Uniformly choose an arm $A_t$;\\
+    }{
+        \textbf{[greedy part]}\\
+        Set $A_t = \arg\max_a \hat{Q}_a$;\\
+    }
+    Obtain reward $X_t$ by playing arm $A_t$;\\
+    Set $T_{A_t} = T_{A_t} + 1$;\\
+    Set $\hat{Q}_{A_t} = \hat{Q}_{A_t} + \frac{1}{T_{A_t}} (X_t - \hat{Q}_{A_t})$;\\
+}
+\Output{actions $A_1, \dots, A_n$ and rewards $X_1, \dots, X_n$}
+\end{algorithm}
+This algorithm always explores with probability $\epsilon$ and with probability $1-\epsilon$ plays greedy. The following lemma shows that if we first play every arm once and then play according to $\epsilon$-greedy, then we get linear regret, i.e. we learn effectively nothing.
+
+\defn{Landau Symbols}{
+For two function $f,g$ we write
+\begin{itemize}
+    \item $f \in \mathcal{O}(g)$ $:\iff$
+    $$
+    \limsup_{x \to x_0} \frac{|f(x)|}{|g(x)|} \to const. \in [0,\infty)
+    $$
+    \item $f \in o(g)$ $:\iff$
+    $$
+    \limsup_{x \to x_0} \frac{|f(x)|}{|g(x)|} \to 0
+    $$
+\end{itemize}
+}
+$f \in \mathcal{O}(g)$ is therefore, that $f$ increases/decreases asymptotically at most slower/faster than $g$.\\
+$f \in o(g)$ is therefore, that $f$ increases/decreases asymptotically strictly slower/faster than $g$.\\
+
+\lem{}{
+Let $\pi$ be a learning strategy, that first, explores every arm once and then plays $\epsilon$-greedy, for $\epsilon \in (0,1)$, then 
+$$
+\lim_{n \to \infty} \frac{R_n (\pi)}{n} = \frac{\epsilon}{K} \sum_{a \in \mathcal{A}} \Delta_a
+$$
+}
+\pf{
+---
+}
+This means that the regret of ETC is at most linear, which is effectively: nothing is learned. Therefore, ETC with constant $\epsilon$ is bad.\\
+In the following theorem we will show that, if we use ETC with decreasing $\epsilon_t$ over time with a specific speed, then we get
+$$
+\limsup_{n \to \infty} \frac{R_n (\pi)}{\log (n)} = const. < \infty.
+$$
+In order to show this we will reformulate it, so that it is easier to prove. First note
+\lem{}{
+If the failure probability $\tau_n (\pi)$ behaves asymptotically like $\frac{1}{n}$, i.e. $\tau_n (\pi) \in \mathcal{O}(\frac{1}{n})$, then
+$$
+R_n(\pi) \in \mathcal{O}(\log(n) \sum_{a \in \mathcal{A}} \Delta_a) = \mathcal{O}(\log(n)).
+$$
+}
+Now we only have to look at the failure probability and can use the Lemma above.
+\thm{Explore then $\epsilon$-greedy with decreasing $\epsilon$}{
+Suppose that all arms take values in $[0,1]$ and define $d < \min_{a \neq a^*} \Delta_a$ and $C>\max \{5d^2,2\}$. Then the $\epsilon$-greedy with decreasing epsilon defined as $\epsilon_t := \max\{1,\frac{CK}{d^2 t}\}$ satisfies
+$$
+\limsup_{n \to \infty} \tau_n (\pi) n \leq \frac{(K-1)C}{d^2},
+$$
+i.e. $\tau_n(\pi) \in \mathcal{O}(\frac{1}{n})$.
+}
+
+\rmkb{
+We will not prove this statement.\\
+Note that we might have now a convergence of the regret of order $\log (n)$, which is in fact better than linear, but in application the size of constants is of importance and they can be very large, because if we have very small reward gabs (i.e. very similar arms), then $\frac{1}{d^2}$ is really large and will dominate the logarithm for a long time. For example $\log (100 000)\approx 11.5$, which is still very small. Further, this approximation is again cheating, as the constant $d$ assume prior knowledge of the rewards gaps
+}
+
+\subsection{UCB algorithm}
+The idea of UCB is optimism in face of uncertainty. It goes as follows. First, explore every arm and then play greedy, although we add a exploration bonus to every Q-value in respect of how often each arm is explored. I.e. as we increase the trust in the estimation, we decrease the bonus. The variance of the estimation could play a role in the bonus, but this is not considered. We define the Q-Values plus the bonus of the UCB algorithm as
+$$
+UCB_a (t,\delta) := \begin{cases}
+    \infty &, T_a(t)=0\\
+    \hat{Q}_a (t) + \underbrace{\sqrt{\frac{2 \log (1/\delta)}{T_a (t)}}}_{\text{exploration bonus}} &, T_a (t)>0
+\end{cases}
+$$
+This exploration bonus is motivated by concentration inequalities. Consider that we have a Subgaussian bandit model $\nu$ and play an arm $n$ times and receive rewards $X_1,...,X_n$, then using Höffdings Inequality
+\begin{align*}
+\mathbb{P}(\frac{1}{n} \sum_{k=1}^n X_k \geq Q+\sqrt{\frac{2 \log (1/\delta)}{n}}) &= \mathbb{P}(\frac{1}{n} \sum_{k=1}^n X_k -Q\geq \sqrt{\frac{2 \log (1/\delta)}{n}}) \\
+&\leq \exp \left( - \frac{n \sqrt{\frac{2 \log (1/\delta)}{n}}^2}{2}  \right) \\
+&= \delta 
+\end{align*}
+Thus, the probability that we overestimate using the mean with the expectation by the exploration bonus, is smaller than $\delta \in (0,1).$ We will later see that $\delta = \frac{1}{n^2}$ is a good choice.\\
+This learning strategy looks as follows
+$$
+\pi_t (a;a_1,x_1,...,x_t) = argmax_a UCB_a (t-1,\delta).
+$$
+The choice of $UCB(0,\delta) \equiv \infty$ forces the algorithm to explore each arm at least once.
+
+\begin{algorithm}[H]
+\caption{UCB Algorithm }
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{bandit model $\nu$, $\delta \in (0,1)$, vector $\hat{Q}$, $n$,vector $\hat{Q}$}
+
+Initialise $T_a = 0$ for all $a$;\\
+\While{$t\leq n$}{
+$A_t = argmax_a UCB_a (t-1,\delta)$;\\
+Obtain reward $X_t$ by playing $A_t$;\\
+$T_{A_t} +=1$;\\
+$\hat{Q}_{A_t}(t) = \hat{Q}_{A_t}(t) + \frac{1}{T_{A_t}} (X_t-\hat{Q}_{A_t}(t))$
+}
+\Output{actions $A_1, \dots, A_n$ and rewards $X_1, \dots, X_n$}
+\end{algorithm}
+
+
+We can now calculate a regret bound for this algoithm. Note that in the following we do not initialize with $\hat{Q}(0)=\infty$, but rather with $\hat{Q}\equiv 0$.
+\thm{UCB first Regret Bound}{
+Suppose we have a 1-Subgaussian bandit model $\nu$ with $\delta=\frac{1}{n^2}$ for the parameter of the UCB algorithm. When we initialize with $\hat{Q}(0)\equiv 0$, then we get the following bound
+$$
+R_n(\pi) \leq 3 \sum_{a \in \mathcal{A}} \Delta_a + 16 \log (n) \sum_{a \neq a^*} \frac{1}{\Delta_a}
+$$
+}
+\pf{
+W.l.o.g. let $a_*=a_1$. We will now estimate the expected number of times a suboptimal arm will be played.\\
+The Idea of the proof is as follows
+\begin{itemize}
+    \item [1)] We know that we can write with the regret decomposition Lemma
+    $$
+    R_n (\pi) = \sum_{a \in \mathcal{A}} \Delta_a \mathbb{E}[T_a(n)]
+    $$
+    thus we can focus on only the expectation first.
+    \item [2.] We can write this expectation as
+    $$
+    \mathbb{E}[T_a(n)] = \mathbb{E}[T_a(n) \textbf{1}_{H_m}] + \mathbb{E}[T_a(n) \textbf{1}_{H_m^C}]
+    $$
+    where $H_m := \{\text{arm $a$ is played at most $m $ times}\}$
+    \item [3)] We can estimate this expectation by
+    $$
+    \mathbb{E}[T_a(n)] = \leq m \mathbb{P}(H_m) + n \mathbb{P}(H_m^C)
+    $$
+    because in case of $H_m$, the $T_a(n)$ could be at most equal to $m$. 
+    \item [4)] We now want to estimate this probability and then optimize over $m$. This is a little tricky, which is why we will introduce smaller events $G_m \subseteq H_m$ for which we can estimate the probabilites.
+\end{itemize}
+Recall that we need for Hoeffdings inequality an iid sum of random variables. This is exactly why we did the random stack construction of the bandit process $(A^\pi,X^\pi)$, because for every $t \leq n$ we have that $X_t^{(a)} \sim P_a$ and thus the estimations of the $Q$-Values is a sum of iid random variables:
+$$
+\bar{Q}_s^{(a)} := \frac{1}{s} \sum_{k=0}^s X_k^{(a)}
+$$
+and we have the relation that
+$$
+\hat{Q}_a (t) = \bar{Q}_s^{(a)} \quad \iff \quad T_a(t)=s.
+$$
+We now fix an arm $a$ and want to estimate the expectation $\mathbb{E}[T_a (n)]$. For this we define the following sets
+\begin{align*}
+    G_1 &:= \{\omega \in \Omega \mid Q_{a_1} < \min_{t \leq n} UCB_{a_1} (t) (\omega) \} \\
+    G_{2,m} &:= \{ \omega \in \Omega \mid \bar{Q}_m^{(a)} (\omega) + \sqrt{\frac{2 \log (1/\delta)}{m}} < Q_{a_1}, a \in \mathcal{A}\setminus \{a_1\} \}
+\end{align*}
+The first set describes that the UCB algorithm never underestimates the $Q$-Values of the best arm $a_1$. The second set is the event that the estimated $Q$-Value and their bonus for the UCB algorithm is after $m$ observations of one arm strictly smaller than the true $Q$-Value of the best arm $a_1$.\\
+We define $G_m := G_1 \cap G_{2,m}$ as the event that both of the other events hold.\\
+\textbf{Step 1:} To show that $G_m \subseteq H_m$ for all $m\leq n$, i.e. $\forall \omega \in G_m$ it follows that $T_a(n) (\omega) \leq m$.\\
+We do a contradiction. Suppose $\omega \in G_m$ but $T_a (n) (\omega) > m$. Then it follows that there exists a time $t \leq n$ such that
+$$
+A_t (\omega) =a  \text{ and there is an $k =1,...,t-m$ such that  }  T_a (t-k)(\omega) =m,
+$$
+i.e. we played between time $t-k$ to time $t-1$ different arms and then at time $t$ the arm for the $m+1$ time. Now using the definitions of the two sets $G_1$ and $G_{a,2}$ yields
+\begin{align*}
+    UCB_a (t-1) (\omega) &\stackrel{Def.}{=} \hat{Q}_a (t-1) (\omega) + \sqrt{\frac{2 \log (1/\delta)}{T_a (t-1) (\omega)}} \\
+    &= \bar{Q}_m^{(a)} (\omega) + \sqrt{\frac{2 \log (1/\delta)}{m}} \\
+     &\stackrel{\text{Def. } G_{a,s}}{<} Q_{a_1} \\
+    & \stackrel{\text{Def. } G_1}{<} \min_{t \leq n} UCB_{a_1} (t) (\omega) \leq UCB_{a_1} (t-1) (\omega)
+\end{align*}
+Thus the UCB algorithm would choose at time $t$ arm $a_1$ and not arm $a$, which is a contradiction to $A_t (\omega)=a$!
+\textbf{Step 2:} Estimation of the Probability of $G_m$.
+We begin by the following
+\begin{align*}
+    \mathbb{E}[T_a (n)] &= \mathbb{E}[T_a (n) \textbf{1}_{G_m}] + [T_a (n) \textbf{1}_{G_m^C}] \\
+    &\leq  \mathbb{E}[T_a (n) \textbf{1}_{H_m}] + [T_a (n) \textbf{1}_{G_m^C}] \\
+    &\leq  \mathbb{E}[m \textbf{1}_{H_m}] + [T_a (n) \textbf{1}_{G_m^C}] \\
+    &\leq  m+n \mathbb{E}[ \textbf{1}_{(G_1 \cap G_{2,m})^C}] \\
+    &=  m+n \mathbb{P}(G_1^C \cup G_{2,m}^C) =  m+n (\mathbb{P}(G_1^C )+ \mathbb{P}( G_{2,m}^C))
+\end{align*}
+We will now look at the two probabilities separately. First, notice that
+
+\begin{align*}
+    \mathbb{P}(G_1^C ) &= \mathbb{P}( \exists t\leq n: Q_{a_1} \geq UCB_{a_1} (t) ) \\
+    &= \sum_{t \leq n} \mathbb{P}(  Q_{a_1} \geq UCB_{a_1} (t) ) \\
+    &= \sum_{t \leq n} \mathbb{P}(  Q_{a_1} \geq  \hat{Q}_a (t) + \sqrt{\frac{2 \log (1/\delta)}{T_a (t)}} ) \\
+    &=  \sum_{t \leq n} \mathbb{P}(  Q_{a_1}-  \frac{1}{T_a (t)} \sum_{k=1}^{T_a (t)} X_k  \geq  \sqrt{\frac{2 \log (1/\delta)}{T_a (t)}} ) \\
+    & \stackrel{\text{Hoeffding}}{ \leq } \sum_{t \leq n} \delta = n \delta
+\end{align*}
+The second probability can be estimated as follows
+\begin{align*}
+    \mathbb{P}(G_{2,m}^C) &= \mathbb{P}(\bar{Q}_m^{(a)} (\omega) + \sqrt{\frac{2 \log (1/\delta)}{m}} \geq Q_{a_1}) \\
+    &= \mathbb{P}(\bar{Q}_m^{(a)} (\omega) + \underbrace{Q_{a}- Q_a}_{=0} +\sqrt{\frac{2 \log (1/\delta)}{m}} \geq Q_{a_1}) \\
+    &= \mathbb{P}(\bar{Q}_m^{(a)} (\omega) -Q_a  \geq \underbrace{Q_{a_1} -Q_a}_{=\Delta_a} - \sqrt{\frac{2 \log (1/\delta)}{m}})
+\end{align*}
+Now assume that we choose $m$ large enough such that
+$$
+\Delta_a - \sqrt{\frac{2 \log (1/\delta)}{m}} \geq \frac{1}{2} \Delta_a
+$$
+(for instance $m = \lceil \frac{2 \log (1/\delta)}{1/4 \Delta_a^2} \rceil$). Using this we get that
+\begin{align*}
+    \mathbb{P}(\bar{Q}_m^{(a)} (\omega) -Q_a  \geq \Delta_a - \sqrt{\frac{2 \log (1/\delta)}{m}}) &\leq \mathbb{P}(\bar{Q}_m^{(a)} (\omega) -Q_a  \geq \frac{1}{2} \Delta_a) \\
+    &\stackrel{\text{Hoeffding}}{\leq} e^{-\frac{m \Delta_a^2}{8}}
+\end{align*}
+Now plugging it all in
+$$
+\mathbb{E}[T_a (n)] \leq m + n(n\delta + e^{- \frac{m \Delta_a^2}{8}})
+$$
+If we plug in $\delta =\frac{1}{n^2}$ and $m =\lceil \frac{2 \log (n^2)}{1/4 \Delta_a^2} \rceil$ yields
+$$
+\mathbb{E}[T_a (n)] \leq \underbrace{\lceil \frac{2 \log (n^2)}{1/4 \Delta_a^2} \rceil}_{\leq 1+ \frac{16 \log (n)}{\Delta_a^2}} + 1+ n e^{-\log(n^2)} \leq 3 + \frac{16 \log (n)}{\Delta_a^2}.
+$$
+
+}
+
+In contrast to the ETC algorithm, where we had to know the reward gabs, to calculate the optimal exploration length, in UCB we get $\mathcal{O}(\log(n))$ performance without knowing the reward gabs. They are here only a theoretical result.\\
+As the bound above is very good in theory, for small $n$ we have the problem that we have to divide by the reward Gabs, which could lead to very large values. If we change the final step in the proof above, we get a bound that is a little faster, but the constants appearing are smaller.
+\thm{UCB second Regret Bound}{
+Suppose we have a $1-$Subgaussian bandit model $\nu$, with $\delta = \frac{1}{n^2}$ for the UCB algorithm parameter. If we again initialize with $\hat{Q}\equiv 0$, then
+$$
+R_n(\pi) \leq 8 \sqrt{Kn \log (n)} + 3 \sum_{a \in \mathcal{A}} \Delta_a.
+$$
+}
+\pf{
+Here we  the results from the last proof, although we approach the problem a little smarter. Small reward gabs can be bounded by a threshold and thus are linear in $n$. The reward gabs above the threshold are the ones that make the problems and where we will apply the results from the last proof. We will then optimize this threshold. Chose $\Delta >0$ such that 
+$$
+\sum_{a \in \mathcal{A}: \Delta_a < \Delta} \Delta_a \leq \Delta.
+$$
+then
+\begin{align*}
+    R_n (\pi) &= \sum_{a \in \mathcal{A}} \Delta_a \mathbb{E}[T_a (n)] \\
+    &= \sum_{a \in \mathcal{A}: \Delta_a< \Delta}\Delta_a \mathbb{E}[T_a (n)] + \sum_{a \in \mathcal{A} : \Delta_a \geq \Delta}\Delta_a \mathbb{E}[T_a (n)]  \\
+    &\leq  \sum_{a \in \mathcal{A}: \Delta_a< \Delta}\Delta_a n + \sum_{a \in \mathcal{A} : \Delta_a \geq \Delta} \Delta_a (3+\frac{16 \log (n)}{\Delta_a^2})  \\
+    &\leq  \Delta n+\sum_{a \in \mathcal{A} : \Delta_a \geq \Delta} \frac{16 \log (n)}{\Delta_a} + \sum_{a \in \mathcal{A} } \Delta_a 3  \\
+    &\leq  \Delta n+ \frac{16K \log (n)}{\Delta} + 3\sum_{a \in \mathcal{A} } \Delta_a   \\
+\end{align*}
+Because $\Delta>0$ was arbitrary, we can optimize the bound such that is as sharp as possible. The minimum is $\Delta^*:= \sqrt{16 K \log(n)/n}$ and plugging this in yields
+$$
+R_n(\pi) \leq  \sqrt{16K n \log(n)}  +\sqrt{16 K n \log(n)} +3\sum_{a \in \mathcal{A} } \Delta_a  =2\cdot 4 \cdot \sqrt{K n \log(n)} +3\sum_{a \in \mathcal{A} } \Delta_a.
+$$
+}
+The term $\sum_{a \in \mathcal{A}} \Delta_a$ appears in both bounds and is very natural, as every reasonable algorithm trys every arm at least once. Depending on the bandit model, this sum can also be bounded by above. For example for a bernulli bandit model, the sum can be approximated by $K$, i.e. the number of arms.
+\rmkb{
+One can also show that if have $\sigma-$Subgaussian bandit model and choose $\delta=\frac{1}{n}^{2\sigma^2}$, then
+$$
+UCB_a (t) := \begin{cases}
+    \infty &, T_a(t)=0\\
+    \hat{Q}_a (t) + \underbrace{\sqrt{\frac{4 \sigma^2 \log (n)}{T_a (t)}}}_{\text{exploration bonus}} &, T_a (t)>0
+\end{cases}
+$$
+and we get for the two regret bounds
+$$
+R_n(\pi) \leq 3 \sum_{a \in \mathcal{A}} \Delta_a + 16 \sigma^2 \log (n) \sum_{a \neq a^*} \frac{1}{\Delta_a}
+$$
+and
+$$
+R_n(\pi) \leq 8 \sigma \sqrt{KN \log (n)} + 3 \sum_{a \in \mathcal{A}} \Delta_a.
+$$
+Potential: Exam Question!\\
+The fact that $\sigma$ appears, means that this is again is cheating. But one could try to obtain $\sigma$ via samples.
+}
+Note that the model based regret bounds are not very sharp, because they focus to strongly on the reward Gabs compared to the regret decomposition lemma, i.e.
+$$
+R_n(\pi) \stackrel{\text{regret decomposition Lemma}}{\leq} \max_{a \in \mathcal{A}} \Delta_a \sum_{t=0}^n \tau_t (\pi) \leq \sum_{a \in \mathcal{A}} \Delta_a \sum_{t=0}^n \tau_t (\pi) \leq \text{"Our bound"}
+$$
+\lem{Two armed regret bound ETC}{
+Consider a two armed bandit model $\nu$, the ETC and $\Delta\leq 1$ then
+$$
+\exists C>0: \quad R_n (\pi) \leq \Delta +C \sqrt{n}.
+$$
+}
+
+\subsection{Boltzmann exploration}
+
+In Boltzmann exploration the Idea is to choose an arm with a positive probability connected to the estimated Q-Value. For lower Q-values the choice of selection is lower and for higher Q-values it is higher. I.e. Boltzman is a mapping $\mathbb{R}^K \to (0,1)$. 
+\defn{Boltzman Distribution}{
+For $x,\theta \in \mathbb{R}^d$ we call $SM(\theta,x)$  the Boltzmann distribution if its probability weights are given by
+$$
+p_k := \frac{e^{\theta_k x_k}}{\sum_{i=1}^d e^{\theta_i x_i}}, \quad k=1,...,d.
+$$
+}
+$\theta$ is often called inverse temperature. $\theta$ has to be chosen positive in order for the logic to hold, that the largest entry of the vector  $x$ gets the highest probability. Else it would be reversed. If $\theta$ is zero, then we have the uniform distribution. As we increase $\theta$, we explore less and less and exploit instead more.
+
+\begin{algorithm}[H]
+\caption{Simple Boltzmann exploration}
+\SetKwInOut{Input}{Data}
+\SetKwInOut{Output}{Result}
+
+\Input{bandit model $\nu$, vector $\hat{Q}$, parameter $\theta$}
+
+Initialise $T_a = 0$ for all $a$;\\
+\While{$t \leq n$}{
+    Sample $A_t$ from SM$(\theta, \hat{Q})$;\\
+    Obtain reward $X_t$ by playing arm $A_t$;\\
+    $T_{A_t} = T_{A_t} + 1$;\\
+    $\hat{Q}_{A_t} = \hat{Q}_{A_t} + \frac{1}{T_{A_t}}(X_t - \hat{Q}_{A_t})$;
+}
+\Output{actions $A_1, \dots, A_n$ and rewards $X_1, \dots, X_n$}
+\end{algorithm}
+
+As the performance of this algorithm is clearly highly depended on the choice of $\theta$, the following Lemma gives us a very important way of representing the Boltzman distribution, such that the choice of $\theta$ will become quite clear. Constant $\theta$ is a bad choice. We do not go into detail.
+\lem{}{
+Consider $x,\theta \in \mathbb{R}^d$ and $g_1,...,g_d \stackrel{iid}{\sim} Gumble$ with scale 1 and mode 0, then
+$$
+SM(\theta,x) \stackrel{(d)}{=} argmax_i \{\theta_i x_i +g_i\}.
+$$
+Note that the Gumble distribution looks as follows: $F(t):= e^{-e^{-t}}$.
+}
+\pf{
+\textbf{1. Step:} \\
+Let $E_1, E_2$ be two independent exponential random variables with parameter $\lambda_1, \lambda_2$, then
+\begin{align*}
+    \mathbb{P}(E_1 \leq E_2) &= \mathbb{E}[\textbf{1}_{E_1 \leq E_2}] \\
+    &= \int_{\Omega} \textbf{1}_{E_1 \leq E_2} d \mathbb{P}^{(E_1,E_2)} \\
+    &= \int_{0\leq x_1 \leq x_2} d \mathbb{P}^{(E_1,E_2)} (x_1,x_2) \\
+     &= \int_{0\leq x_1 \leq x_2} f_{(E_1,E_2)}(x_1,x_2) d (x_1,x_2) \\
+     &= \int_{0\leq x_1 \leq x_2} f_{E_1}(x_1) f_{E_2}(x_2)  d (x_1,x_2) \\
+     &= \int_0^\infty  \int_{0}^{x_2} f_{E_1}(x_1) f_{E_2}(x_2)  d x_1dx_2 \\
+     &= \int_0^\infty  \int_{0}^{x_2} \lambda_1 e^{-\lambda_1 x_1} \lambda_2 e^{-\lambda_2 x_2}  d x_1dx_2 \\
+     &= \lambda_1 \lambda_2 \int_0^\infty e^{-\lambda_1 x_1}  \int_{0}^{x_2}   e^{-\lambda_2 x_2}  d x_1dx_2 \\
+      &= \lambda_1 \lambda_2 \int_0^\infty e^{-\lambda_1 x_1} \frac{1}{\lambda_1} (1-e^{-\lambda_1 x_2})  dx_2 \\
+      &=  \lambda_2 \int_0^\infty   e^{-\lambda_1 x_1}-e^{-(\lambda_1+\lambda_2) x_2}  dx_2 \\
+      &= 1- \frac{\lambda_2}{\lambda_1 + \lambda_2} = \frac{\lambda_1}{\lambda_1+ \lambda_2}
+\end{align*}
+Now we can apply this and calculate the distribution of independent $E_1,...,E_n$ exponential random variables. Note that $\min_{i=1,...,n} E_i \sim Exp(\sum_{i=1}^n \lambda_i)$ from Stochastik 1. Thies yields
+\begin{align*}
+    \mathbb{P}(argmin_{j \leq n} E_j =i) = \mathbb{P}( \forall k \neq i: E_i \leq E_k  ) = \mathbb{P} (E_i \leq \min_{k \neq i} E_k) = \frac{\lambda_i}{\lambda_i + \sum_{k\neq i} \lambda_k}.
+\end{align*}
+Now if $ X \sim Exp(1)$ it follows that $Z:= - \log (X) \sim Gumbel(0,1)$, because
+$$
+\mathbb{P}(Z \leq t) =\mathbb{P}(X \geq e^{-t}) = 1-1+ e^{-e^{-t}}, \quad t \in \mathbb{R}.
+$$
+For every exponentially distributed random variable $E_1 \sim Exp(1)$ we have
+$$
+\mathbb{P}(c E_1 \leq t) = 1-e^{-t/c}, \quad c \in \mathbb{R},
+$$
+i.e. $cE_1 \sim Exp(1/c)$. Using this we get for every $c \in \mathbb{R}$ and $g \sim Gumbel(0,1)$
+$$
+c+g \sim c - \log (E_1)= -(\log(e^{-c}) +\log (E_1)) = - \log(e^{-c} E_1) \sim - \log (E_{e^c}),
+$$
+where $E_{e^c} \sim Exp(e^c)$. Thus we cam finally show the assertion
+\begin{align*}
+    \mathbb{P}(argmax_{k \leq n} (\theta_k x_k + g_k) =i ) &= \mathbb{P}(argmax_{k \leq n} -\log (E_{e^{\theta_k x_k}})  =i ) \\
+     &= \mathbb{P}(argmin_{k \leq n} E_{e^{\theta_k x_k}}  =i ) \\
+     &= \frac{e^{\theta_i x_i}}{ \sum_{k\leq n} e^{\theta_k x_k}}= \mathbb{P}(SM(\theta,x) =i) .
+\end{align*}
+}
+Therefore, we can now sample from the Boltzmann distribution if we take for $g_1,...,g_d \stackrel{iid}{\sim} Gumble$
+$$
+A_t \sim argmax_a \{ \theta \hat{Q}_a (t-1)+ g_a\} = argmax_a \{  \hat{Q}_a (t-1)+ \theta^{-1}g_a\}
+$$
+This looks exactly like the UCB. In an article --Cesa-Bianci et al-- it was shown that if we choose $\theta_n^{-1} = \sqrt{\frac{C}{T_a(n)}}$, then we get UCB.\\
+
+\subsection{Policy Gradient for Stochastic Bandits}
+We now have a different approach, in finding optimal policies that are more closely related to reinforcement learning. We no longer look at learning strategies that minimize regret. The goal here is to find the best arm as quickly as possible, regardless the regret.
+
+\defn{Policy and Value of a Policy}{
+A distribution $\pi$ on $\mathcal{A}$ is called a policy and the expected reward, when playing this policy 
+$$
+V(\pi) := Q_\pi := \sum_{a \in \mathcal{A}} \pi(a) Q_a
+$$
+is called the value of the policy.
+}
+Note, in the chapters above we had learning strategies and not policies. A policy $\pi^*$ is called optimal if
+$$
+\pi^* \in argmax_\pi V(\pi).
+$$
+Because 
+$$
+V(\pi) =  \sum_{a \in \mathcal{A}} \pi(a) Q_a \leq Q_{a^*},
+$$
+the optimal policy is always such that it only plays the best arm, i.e. $(0,...,0,1,0,...,0)$. If there are multiple arms, that are the best, then it does not matter which of them is played.\\
+We call a learning strategy value based, if one first estimates $Q$ or $V$ and then from this defines the policy in the next step.\\
+
+
+\defn{Parameterized Family of Policies}{
+If $\Theta \subseteq \mathbb{R}^d$ then we call the set of probability distributions $\{\pi_\theta \mid \theta \in \Theta\}$ on $\mathcal{A}$ a parameterized Family of Policies.
+}
+
+The approach is as follows. We define the mapping over $\theta$
+$$
+\theta \mapsto J(\theta) := Q_{\pi_\theta}  := \sum_{a \in \mathcal{A}} Q_a \pi_\theta (a)
+$$
+and then we define gradient descent (direction of steepest descent)
+$$
+\forall n \in \mathbb{N}: \quad \theta_{n+1} = \theta_n + \alpha \nabla J(\theta).
+$$
+Under assumptions on $J$ as convexity, then this method converges to a global minimum.\\
+The optimal policy is clearly the one that chooses with probability one the best arm, i.e. $\pi^*(\cdot) := \delta_{a^*} (\cdot)$. Thus the parametrized family should be able to approximate dirac measures. In practice we have the following three issues
+\begin{itemize}
+    \item How can we find a good parametrization, such that the parameterized policies contains the optimal policy, but is not too large.
+    \item If $J$ is unknow, how can we do gradient descent?
+    \item Even if we know $J$ how can we do gradient descent such that we reach an global maximum.
+\end{itemize}
+
+We will now answer the second question. We will now show that we can write $\nabla J$ as an expectation and then we can sample from it.
+\rmkb{
+We can write
+\begin{align*}
+    \nabla J(\theta) &= \nabla \sum_{a \in \mathcal{A}} Q_a \pi_\theta (a) \\
+    &=  \sum_{a \in \mathcal{A}} Q_a \nabla \pi_\theta (a) \frac{\pi_\theta (a)}{\pi_\theta (a)} \\
+    &=  \sum_{a \in \mathcal{A}} Q_a \nabla \log( \pi_\theta (a) )\pi_\theta (a) \\
+    &=  \mathbb{E}[Q_A \nabla \log( \pi_\theta (A) )] \\
+    &= \mathbb{E}[\mathbb{E}[X_A\mid A] \nabla \log( \pi_\theta (A) )] \\
+    &= \mathbb{E}[\mathbb{E}[X_A \nabla \log( \pi_\theta (A) )\mid A]] \\
+    &= \mathbb{E}[X_A \nabla \log( \pi_\theta (A) )] 
+\end{align*}
+}
+
+\defn{Score Function}{
+We call the mapping for every $a \in \mathcal{A}$
+$$
+(a,\theta)\mapsto\nabla \log( \pi_\theta (a))
+$$
+the score function.
+}
+
+We can do gradient descent, either by taking one sample
+$$
+\theta_{n+1} = \theta_n + \alpha X_{A_n} \nabla \log( \pi_\theta (A_n) ), \quad n \in \mathbb{N}
+$$
+or multiple
+$$
+\theta_{n+1} = \theta_n + \alpha \frac{1}{N}\sum_{i=1}^N X_{A_n^{i}}^{i} \nabla \log( \pi_\theta (A_n^{i}) ), \quad n \in \mathbb{N}.
+$$
+
+Now we consider the first question. 
+\rmkb{
+A direct parametrization is if
+$$
+(\pi_\theta (a_1),..., \pi_\theta (a_d)) = (\theta_1,...,\theta_d)
+$$
+This is tabular softmax???\\
+We use the softmax parametrization, i.e. we have $\theta \in \mathbb{R}^d$ and then use the $SM(\theta,1)$. This is also due to the fact that when we rewrote the gradient of $J$, we have a $\log(\pi_\theta (A))$ inside of the expectation, i.e.
+$$
+\log( \pi_\theta (A)) = \log (e^{\theta_A}) - \log (\sum_{a \in \mathcal{A}} e^{\theta_a}) = \theta_A - \log (\sum_{a \in \mathcal{A}} e^{\theta_a}).
+$$
+The only problem with softmax is that we cannot find a $\theta$ such that $\pi_\theta (a) = (0,....,0,1,0,....0)$ of this form, i.e. the softmax is only a bijective mapping between
+$$
+\mathbb{R}^d \to (0,1)^d.
+$$
+We can only approximate dirac policies, by sending one $\theta_a$ to infinity (faster than the others is also sufficient).\\
+In the later chapters, the parametrization will be a neural network.
+}
+
+In the next remark we will shortly explain why we call this method reinforcement learning.
+
+\rmkb{
+We will now look at how the score function looks like, when we use softmax parametrization and what this does to the gradient descent. We have for every $a \in \mathcal{A}$ and the $i^{th}$ entry of the score function vector, with $|\mathcal{A}|=K$
+$$
+(\nabla \log (\pi_\theta (a)))_{i=1,...,K} =( \nabla (\theta_a - \log(\sum_{a \in \mathcal{A}} e^{\theta_a})))_{i=1,...,K} =( \textbf{1}_{a=i} - \frac{e^{\theta_i}}{\sum_{a \in \mathcal{A}} e^{\theta_a}})_{i=1,...,K} = ( \textbf{1}_{a=i} - \pi_\theta (i) )_{i=1,...,K}
+$$
+If we plug this into gradient descent scheme with one sample, where we took at step $n$ action $a=k$, we get update
+$$
+\begin{pmatrix}
+    \theta_{1,n+1}\\
+    \cdots \\
+    \theta_{k,n+1} \\
+    \cdots \\
+    \theta_{K,n+1}
+\end{pmatrix} = \theta_n + \alpha X_k \cdot \begin{pmatrix}
+    - \pi_{\theta_n} (1) \\
+    \cdots \\
+    1-\pi_{\theta_n} (k) \\
+    \cdots \\
+    - \pi_{\theta_n} (K)
+\end{pmatrix} = \begin{pmatrix}
+    \theta_{1,n} - \alpha X_k \pi_{\theta_n} (1) \\
+    \cdots \\
+    \theta_{k,n} + \alpha X_k (1-\pi_{\theta_n} (k)) \\
+    \cdots \\
+    \theta_{K,n} - \alpha X_k \pi_{\theta_n} (K) 
+\end{pmatrix}
+$$
+If playing arm $a=k$ gives a positive reward $X_k$ then $\theta_k$ is increased and all other $\theta_i$ are decreased in the next round. If arm $a=k$ yields a negative reward, this behavior is reversed.\\
+The problem is though, that positive rewards do not nessecarly translate to good action. If we only have positively distributed arms, then all arms are enforced if they are played, but the best arms are more strongly enforced, i.e. they go faster to infinity. This leads to the same result. \\
+So when calculating the gradient descent method, we found an algorithm that could have been found plausibly. 
+}
+We can also add, as in greedy algorithms, a baseline, such that we can more easily find, what is a "good" arm. I.e. we have
+$$
+\theta_{n+1} = \theta_n + \alpha (X_a -b) \nabla\log (\pi_{\theta_n} (a)).
+$$
+We will now show why this choice is equivalent to using no baseline.
+\rmkb{
+We have for the gradient of the value function for a baseline $b \in \mathbb{R}$
+$$
+\nabla J(\theta) = \mathbb{E}[X_A \nabla\log (\pi_\theta (A))] = \mathbb{E}[X_A \nabla \log (\pi_\theta (A))] -\underbrace{ \mathbb{E}[b \nabla \log (\pi_\theta (A))]}_{=0} = \mathbb{E}[(X_A-b) \nabla \log (\pi_\theta (A))].
+$$
+We only have to show the equality with zero. This is due to
+\begin{align*}
+    \mathbb{E}[b \nabla\log (\pi_\theta (A))] &= b \sum_{a \in \mathcal{A}} \nabla\log (\pi_\theta (a)) \pi_\theta (a)\\
+    &= b \sum_{a \in \mathcal{A}}  \nabla \pi_\theta (a) \frac{\pi_\theta (a)}{\pi_\theta (a)}\\
+    &= b \nabla \sum_{a \in \mathcal{A}}   \pi_\theta (a)\\
+    &= b \nabla 1 =0
+\end{align*}
+}
+This approach (can) drastically reduces the committal behavior. The question is how to choose $b$. There are two approaches on how to choose plausibly:
+\begin{itemize}
+    \item Choose $b$ such that is reduces the variance of the estimation of the expectation.
+    \item Choose for the update at time $n+1$ the baseline as $b= J(\theta_n)=V(\pi_{\theta_{n}})$ as the value of the current policy.
+\end{itemize}
+The first choice is very reasonable, because we want the estimation to be more stable, but as it turns out, this is a pathwise not so good choice. This is because the second choice is better??? In the second choice we only enforce an arm, that has a better reward, than the current value of the policy. The problem here is that we do not know the value function of the current policy, as this again is an expectation, i.e. we need to estimate it. This will be later called Actor-Critic. First we calculate the value of the current policy and then improve it.
+\rmkb{
+One can show that choosing the baseline as
+$$
+b^* := \frac{\mathbb{E}[X_A \| \nabla \log (\pi_\theta(A))\|_2^2]}{\mathbb{E}[ \| \nabla \log (\pi_\theta(A))\|_2^2]}
+$$
+minimizes the variance for the unbiased estimator
+$$
+\forall b \in \mathbb{R}: \quad (X_A -b)\nabla \log (\pi_\theta (A)), \quad A \sim\pi_\theta
+$$
+of $J(\theta)$.
+}
+
+
+\rmkb{
+Actor-Critic methods are as follows: The Critic samples from $V(\pi_{\theta_{t}})=b$. Then using this baseline, the actor does gradient descent and updates $\theta_{t+1}$.
+}
+
+
+\end{document}
