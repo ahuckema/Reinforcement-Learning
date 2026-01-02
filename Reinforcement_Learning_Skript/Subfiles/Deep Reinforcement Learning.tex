@@ -30,10 +30,29 @@ then, the above can be written as
 &\forall \phi \in C_b(\mathbb{R}): \quad \int_{\mathbb{R}} \phi (z) d \eta_{s,a}^\pi (z) = \mathbb{E}_{s,a}^\pi [\int_\mathbb{R} \phi (R+\gamma z) d \eta_{S^\prime,A^\prime} (z) ]= \mathbb{E}_{s,a}^\pi [ \int_\mathbb{R} \phi (z) d (\eta_{S^\prime,A^\prime})_{f_{R,\gamma}} (z)  ]\\
 & \iff \forall \phi \in C_b(\mathbb{R}):\quad \langle \phi, \eta_{s,a}^\pi \rangle = \mathbb{E}_{s,a}^\pi [\langle \phi, (\eta_{S^\prime,A^\prime}^\pi)_{f_{R,\gamma}} \rangle].
 \end{align*}
-In the weak sense we define the Bellman operator as 
+
+For any $\phi \in C_b(\mathbb{R})$ and any measure $\nu$ we have 
+\begin{align*}
+    (\nu * \delta_r) (\phi) &=\int_\mathbb{R} \phi (z) d (\nu * \delta_r) (z)= \int_\mathbb{R} \int_\mathbb{R} \phi (x+y) d \nu(x) d\delta_r(y) \\
+    &= \int_\mathbb{R} \phi (x+r) d \nu (x) = (\nu (\cdot-r)) (\phi).
+\end{align*}
+Next, define $D_\gamma (x) := \gamma x$, then if $Z \sim \eta^\pi (x,a)$ then $\gamma Z\sim (\eta^\pi (s,a))_{D_\gamma}$. In total 
 \[
-\mathcal{T}^\pi \eta^\pi_{s,a} := \sum_{s^\prime ,a^\prime,r}  \pi (a^\prime ; s^\prime) p(s^\prime,r;s,a) (\eta_{s^\prime,a^\prime}^\pi)_{f_{r, \gamma}}.
+Z\gamma +r \sim (\eta^\pi (s,a))_{D_\gamma} (\cdot-r) = ((\eta^\pi (s,a))_{D_\gamma} * \delta_r)
 \]
+holds in sense of distribution. Now define the distributional Bellman operator in sense of distribution as 
+\[
+\mathcal{T}^\pi Z^\pi (s,a) = R(s,a) + \gamma Z^\pi (S^\prime,A^\prime),
+\]
+i.e.  the distribution
+\[
+    \mathcal{T}^\pi: (\mathcal{P}(\mathbb{R}))^{\mathcal{S} \times \mathcal{A}} \to (\mathcal{P}(\mathbb{R}))^{\mathcal{S} \times \mathcal{A}}, (\nu_{s,a})_{(s,a) \in \mathcal{S} \times \mathcal{A}} \mapsto ((\mathcal{T}^\pi \nu)_{s,a})_{(s,a) \in \mathcal{S} \times \mathcal{A}} 
+    \]
+    is point wise defined for all $\phi \in C_b (\mathbb{R})$ as
+\[
+(\mathcal{T}^\pi \nu)_{s,a} (\phi) := \mathbb{E}_{s,a}^\pi [ ( (\nu (S^\prime,A^\prime))_{D_\gamma} * \delta_R ) (\phi) ] = \sum_{s^\prime,a^\prime,r} \pi (a^\prime;s^\prime) p(s^\prime,r;s,a) ((\nu_{s^\prime,a^\prime})_{D_\gamma} * \delta_r )(\phi)
+\]
+ 
 
 
 \end{document}
