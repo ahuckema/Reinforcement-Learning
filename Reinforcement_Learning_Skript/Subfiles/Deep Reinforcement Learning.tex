@@ -54,5 +54,33 @@ i.e.  the distribution
 \]
  
 
+\section{Deep Q-Networks}
+Deep Q-Networks (DQN) is a Q-learning variant that utilizes deep neural networks to approximate the Q-value. This algorithm addresses how to deal with large, continuous state action spaces $(\mathcal{S},\mathcal{A})$. The idea is to reduce dimensionality by plugging in the state space $\mathcal{S}$ (e.g. pixels in an Atari game) into a convolutional neural layer, which is the fed into a feed forward neural network that outputs the Q-value for each action $a \in \mathcal{A}$. Problems with simple neural networks are 
+\begin{itemize}
+    \item They can forget
+    \item Are unstable: small changes in Q-values can lead to big changes in the policy, i.e. the action distribution 
+    \item Correlation: In a trajectory $\tau_i$ of a rollout, the consecutive states $s_t,s_{t+1}$ are highly correlated, which violates the i.i.d. assumption for estimating the expectation.
+    \item The loss is non-stationary, since the target values depend on the parameters of the network itself, meaning 
+    \[
+    \mathcal{L} (\theta) := \mathbb{E}[(\mathbb{E}[R+ \gamma \max_{a^\prime} Q^\theta (S^\prime,a^\prime)] - Q^\theta (S,A))^2],
+    \]
+    where both $Q$ terms depend on $\theta$.
+\end{itemize}
+In DQN these issues where solved by the following 
+\begin{itemize}
+    \item Experience Replay: A behavoiral policy $\pi^b$ samples Rollouts, that are stored in a buffer $\mathcal{D} = \{(s_i,a_i,r_i,s_i^\prime)\}_{i=1}^N$. In order to break the correlation between consecutive states, mini batches are sampled uniformly from this buffer to update the Q-network.
+    \item Target Network: A second network with parameters $\theta^-$ is introduced, which is bootstrapped, i.e. every $C$ steps the parameters of the Q-network are copied to the target network $\theta^- \leftarrow \theta$. This delay stabilizes the training.
+\end{itemize}
+
+
+
+\section{Proximal Policy Gradient}
+
+\section{Advantage Estimation}
+
+\subsection{Variants to PPO}
+
+\section{Stable Baselines3}
+
 
 \end{document}

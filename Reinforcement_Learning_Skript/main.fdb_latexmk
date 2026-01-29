@@ -1,12 +1,12 @@
 # Fdb version 4
-["biber main"] 1765643227.21599 "main.bcf" "main.bbl" "main" 1767376985.08319 0
-  "main.bcf" 1767376984.84299 108917 05f14d3cf82d23add85c4ee544c7e222 "pdflatex"
+["biber main"] 1765643227.21599 "main.bcf" "main.bbl" "main" 1769676816.25771 0
+  "main.bcf" 1769676816.02335 108917 05f14d3cf82d23add85c4ee544c7e222 "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1767376979.48922 "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/main.tex" "main.pdf" "main" 1767376985.08344 0
-  "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/main.tex" 1767376979.28957 9650 c279e255b0487fee1b07e59f5f390b24 ""
+["pdflatex"] 1769676810.66425 "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/main.tex" "main.pdf" "main" 1769676816.25795 0
+  "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/main.tex" 1769676804.81179 9650 c279e255b0487fee1b07e59f5f390b24 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -315,7 +315,7 @@
   "Pictures/Q-learning Drawbacks.png" 1765642456.88291 65782 6591457c2bef618bbe8ddd97d46e78d9 ""
   "Pictures/Subderivatives.png" 1765642459.22077 320480 58072f555e64b869a921a169033c52e9 ""
   "Subfiles/Bandits.tex" 1765643667.16892 62513 53cc03c00c419aed61d54006eaeb30b6 ""
-  "Subfiles/Deep Reinforcement Learning.tex" 1767376976.26241 3315 6eecfad5a4250828d1b66a91629232f8 ""
+  "Subfiles/Deep Reinforcement Learning.tex" 1769676790.87221 5303 88a041b6708df24bce6443c99dd517d2 ""
   "Subfiles/Dynamic Programming.tex" 1765643667.16897 89398 b4c136062115860f17161dead2916d06 ""
   "Subfiles/Finite Time MDPs.tex" 1765643667.16889 2975 dd30681a52459e40a752c23904ac2fd6 ""
   "Subfiles/Gradient Descent Methods.tex" 1765643667.16891 36436 603596c6e78ff3545b42285a7fa767e7 ""
@@ -325,12 +325,12 @@
   "Subfiles/Stochastic Fixed Point Iterations.tex" 1765643667.16146 48722 dadfe0751f54cbe79bb4a70249081fac ""
   "Subfiles/Zusatz.tex" 1765643667.16097 4222 eef87673a8726827e0b09af77e1581a1 ""
   "amd.sty" 1765642833.53079 7646 92bdc5dbfa337ea0a32c9ee79e92e868 ""
-  "main.aux" 1767376984.83821 13678 7e535708b9692ee1f2d3ebc6f6d1e514 "pdflatex"
+  "main.aux" 1769676816.01873 14284 43d3cf32ae474581f42b78c2feb83746 "pdflatex"
   "main.bbl" 1765643229.21262 466 76d65a242ec496c9b4361af646ff12cb "biber main"
-  "main.out" 1767376984.84018 11860 4d08bf1b62fe220a5ac85b92cb70c2c1 "pdflatex"
-  "main.run.xml" 1767376984.84375 2309 3604383b78a08d3178db01a2344046a7 "pdflatex"
-  "main.tex" 1767376979.28957 9650 c279e255b0487fee1b07e59f5f390b24 ""
-  "main.toc" 1767376984.84382 5271 b772f5fbb9e97b5ece08159f0ab24b7b "pdflatex"
+  "main.out" 1769676816.02083 12618 298976f0668d85a7e32158c5c9590a54 "pdflatex"
+  "main.run.xml" 1769676816.02399 2309 3604383b78a08d3178db01a2344046a7 "pdflatex"
+  "main.tex" 1769676804.81179 9650 c279e255b0487fee1b07e59f5f390b24 ""
+  "main.toc" 1769676816.02406 5672 3efe46f40b6ece7fe4a6a4267b39d5b7 "pdflatex"
   "theorems.tex" 1765643226.97525 6051 0000b43ebd7e33abd919234d929db039 ""
   (generated)
   "main.aux"
