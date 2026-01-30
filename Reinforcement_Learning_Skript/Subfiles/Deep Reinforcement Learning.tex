@@ -71,6 +71,36 @@ In DQN these issues where solved by the following
     \item Experience Replay: A behavoiral policy $\pi^b$ samples Rollouts, that are stored in a buffer $\mathcal{D} = \{(s_i,a_i,r_i,s_i^\prime)\}_{i=1}^N$. In order to break the correlation between consecutive states, mini batches are sampled uniformly from this buffer to update the Q-network.
     \item Target Network: A second network with parameters $\theta^-$ is introduced, which is bootstrapped, i.e. every $C$ steps the parameters of the Q-network are copied to the target network $\theta^- \leftarrow \theta$. This delay stabilizes the training.
 \end{itemize}
+Tabular Q-learning can be interpreted in the following two ways: 
+\begin{itemize}
+    \item ML view: Fit a target $Q_n$ to the data $Q^{\pi^*}$. Define $Y_n := R + \gamma \max_{a^\prime \in \mathcal{A}} Q_n (S^\prime,a^\prime)$ and 
+    \[
+    \tilde{L}_n^Q := \mathbb{E} [ (\mathbb{E}_{S,A} [Y_n] - Q_n (S,A))^2 ] = \mathbb{E}[(Y_n - Q_n (S,A))^2] + \mathbb{E}[ \mathbb{V}_{S,A} (Y_n)]=: L_n^Q + \mathbb{E}[ \mathbb{V}_{S,A} (Y_n)].
+    \]
+    \item RL view: We want to approximate the Bellman optimality operator 
+    \[
+    T^* Q(s,a) := \mathbb{E}_{s,a} [R + \gamma \max_{a^\prime \in \mathcal{A}} Q(S^\prime,a^\prime)].
+    \]
+    Because it is a contraction in $\| \cdot \|_\infty$, the fixed point iteration converges.
+\end{itemize}
+Because the expectation is the minimizer of the $L^2$ error (variance), it holds that $ \mathbb{E}[X] = \arg \min_{\theta} \mathbb{E}[(X - \theta)^2]$ which leads to 
+\[
+T^* Q(s,a) = \mathbb{E}_{s,a} [R+\gamma \max_{a^\prime \in \mathcal{A}} Q(S^\prime ,a^\prime)] = \arg \min_{\theta} \mathbb{E}_{s,a} [(R + \gamma \max_{a^\prime \in \mathcal{A}} Q(S^\prime ,a^\prime) - \theta)^2].
+\]
+Thus doing one step SGD (with step size $\frac{\alpha}{2}$ ???) on $L_n^Q$ or doing the iteration for Q-learning yields the same scheme:
+\[
+Q_{n+1} (s,a) = Q_n (s,a) + \alpha (y-Q_n (s,a)).
+\]
+\rmkb{
+    When doing Q-learning with neural networks, we no longer do the gradient on $(s,a) \in \mathcal{S}\times \mathcal{A}$, but instead on a smaller parameter space $\Theta \subset  \mathcal{S}\times \mathcal{A}$. Additionally, parameterizing the target with a different set of parameters $\theta^-$ the gradient of the loss becomes 
+    \[
+    \nabla_\theta L_n^Q = \mathbb{E} [ \nabla_\theta (Y_n^{\theta^-} - Q_n^\theta (S,A))^2 ] = -\mathbb{E} [ 2 (Y_n^{\theta^-} - Q_n^\theta (S,A)) \nabla_\theta Q_n^\theta (S,A) ].???-
+    \]
+    So the gradient step for SGD becomes 
+    \[
+    Q_{n+1}^\theta (s,a) = Q_n^\theta (s,a) + \alpha (y_n^{\theta^-} - Q_n^\theta (s,a)) \nabla_\theta Q_n^\theta (s,a).
+    \]
+}
 
 
 
@@ -78,7 +108,7 @@ In DQN these issues where solved by the following
 
 \section{Advantage Estimation}
 
-\subsection{Variants to PPO}
+\section{Variants to PPO}
 
 \section{Stable Baselines3}
 
