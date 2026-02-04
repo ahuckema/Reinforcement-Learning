@@ -102,6 +102,100 @@ Q_{n+1} (s,a) = Q_n (s,a) + \alpha (y-Q_n (s,a)).
     \]
 }
 
+\rmkb{
+    In a convolutional neural network a convolutional layer is given by 
+    \[
+    (f_k * h) (i) = \sum_{j=-n}^n f_k(i-j) h(i),
+    \]
+    where $f_i$ is a filter $k=1,...,K$ and $h$ is some input vector. These $K$ filters operator simultaninously to and produce $(f_k * h) (i), k=1,...,K$ as output. $K$ is the number of Filters. In this setting the step size is called stride and was in the above $1$. In general it is 
+    \[
+    (f_k * h) (i) = \sum_{j=-n}^n f_k(i+s-j) h(i), \quad s \in \mathbb{N}.
+    \]
+}
+
+\rmkb{
+    For Atari games the Architecture is as follows:
+    \begin{itemize}
+        \item Preprocessing: The environment $84 \times 84$ pixels is converted into grayscale. Let $x_t \in \mathbb{R}^{H\times W}$ be a greyscale image at time $t$, where $H=W=84$. To create a sense of motion four consecutive images are stacked: $s_t := (x_t,...,x_{t-3}) \in \mathbb{R}^{H\times W \times 4}$. Together with the scores, this is fed into the neural network.
+        \item Convolutional Layers: There are three convolutional layers used. Each convolutional layers is followed by a ReLU activation function. The first layer has 32 filters of size $8 \times 8$ with stride $4$. The second layer has 64 filters of size $4 \times 4$ with stride $2$. The third layer has 64 filters of size $3 \times 3$ with stride $1$.
+        \item Feed Forward Layers: The output of the last convolutional layer is flattened and fed into a fully connected layer with 512 units, followed by a ReLU activation function.
+        \item Output: The final layer in the network is a fully connected layer that outputs a vector of Q-values, one for each possible action in the Atari game.
+    \end{itemize}
+}
+
+
+\rmkb{
+    \begin{itemize}
+        \item Experience Replay: This solves two problems: From the buffer $\mathcal{D}$ mini batches are chosen following an $\epsilon$-greedy policy, which solves the problem of the correlation between rollouts and the policy. Further, it also solves the problem, that neural networks are prone to forget old data. \\
+        If the buffer is full, the oldest transitions are removed first.
+        \item Target Networks:
+        \begin{itemize}
+            \item Different Parametrization: The target distribution is parametrized with $\theta^-$ Every $N$ steps it is updated with a soft update rule 
+        \[
+        \theta^- \leftarrow \tau \theta^- + (1-\tau) \theta.
+        \]
+        This stabilizes training: 
+        \[
+        \tilde{L}_n (\theta) := \mathbb{E}[ \left( \mathbb{E}_{S,A} [Y_n^{\theta^-}] - Q_n^\theta (s,a)  \right)^2 ] = L_n (\theta) + \mathbb{E}[ \mathbb{V}_{S,A} [Y_n^{\theta^-}] ],
+        \]
+        because $\tilde{L}_n (\theta)$ no longer depends on the expected variance.
+        \item Update every $N$ steps: With the second point of view of $Q$ learning, updating every $N$ steps is actually $N$ step SGD of 
+        \[
+        T^* Q^{\theta^-} (s,a) = \mathbb{E}_{s,a} [R+\gamma Q^{\theta^-} (S^\prime,a^\prime) ] = \arg \min_{\theta} \mathbb{E}[(Y_n^{\theta^-} - \theta)^2].
+        \]
+        \end{itemize} 
+    \end{itemize}
+}
+\begin{algorithm}[H]
+\SetKwInput{Data}{Data}
+\SetKwInput{Result}{Result}
+\SetAlgoLined
+\DontPrintSemicolon
+
+\Data{Replay buffer capacity $|D|$, discount factor $\gamma$, exploration rate $\varepsilon$, target update frequency $N$}
+\Result{Trained Q-network approximating $Q^*$}
+
+Initialise replay buffer $D$\;
+Initialise Q-network with random weights $\theta$\;
+Copy weights to target network: $\theta^- \leftarrow \theta$\;
+
+\For{each episode}{
+    Pre-process the initial observation $s_1$ to obtain state representation $\phi_1$\;
+    \For{each time-step $t$}{
+        Select action $a_t$ using $\varepsilon$-greedy policy based on $Q(\phi_t, a; \theta)$\;
+        Execute action $a_t$, observe reward $r_t$ and next observation $s_{t+1}$\;
+        Pre-process $s_{t+1}$ to obtain $\phi_{t+1}$\;
+        Store transition $(\phi_t, a_t, r_t, \phi_{t+1})$ in replay buffer $D$\;
+        Sample mini-batch $B$ of transitions from $D$\;
+        \For{each transition $i \in B$}{
+            Compute target: \\
+            $Y_i = \begin{cases} r_i, & \text{if terminal transition,} \\ r_i + \gamma \max_{a'} Q(\phi'_i, a'; \theta^-), & \text{otherwise.} \end{cases}$
+        }
+        Perform gradient descent on loss:
+        \[ L_B(\theta) = \frac{1}{|B|} \sum_{i \in B} (Y_i - Q(\phi_i, a_i; \theta))^2 \]
+        Update Q-network weights $\theta$\;
+        \If{every $N$ steps}{
+            Update target network: $\theta^- \leftarrow \theta$\;
+        }
+        However, target networks increase memory, as it another neural network needs to be stored and updating the weights increases computational costs.
+    }
+}
+\caption{The Deep Q-Network (DQN) algorithm.}
+\end{algorithm}
+\rmkb{
+    \begin{itemize}
+        \item Double Q-learning and Double DQN: Q-learning over estimates the action values due to the max. operator, In Double Q-learning we maintain two independent networks $Q^{A}$ and $Q^B$ to estimate $Q^{\pi^*}$:
+        \begin{align*}
+           & Q^A (s,a) \leftarrow (1-\alpha) Q^A (s,a) + \alpha \left( r + \gamma Q^B (s^\prime , \arg \max_{a^\prime \in \mathcal{A}} Q^{A} (s^\prime, a^\prime )) \right)\\
+            &=(1-\alpha) Q^A (s,a) + \alpha \left( r + \gamma Q^A (s^\prime , \arg \max_{a^\prime \in \mathcal{A}} Q^{A} (s^\prime, a^\prime )) \right) \\
+            &+\gamma \left( Q^B (s^\prime,\arg \max_{a^\prime \in \mathcal{A}} (s^\prime,a^\prime)) - Q^{A} (s^\prime,\arg \max_{a^\prime \in \mathcal{A}} Q^{A} (s^\prime,a^\prime)) \right).
+        \end{align*}
+        In Double Q-learning the Networks are updated in every step and independendly. In Double DQN we give one network the role of the target network and the other the Q-network. The Q-network is updated every step. The target network is updated only every N step with the soft update rule, which depends on the Q-network. So indepence and simultaninous updates do not happen.
+        \item Clipped Double Q/TD3: Another approach is to clip the bias term (third summand in the above) by taking its negative part: $b^- := \min \{b,0\}$. The deep variant of this method is called Twin delayed double Deep Q Networks.
+    \end{itemize}
+}
+
+
 
 
 \section{Proximal Policy Gradient}

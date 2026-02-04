@@ -52,10 +52,10 @@
 \contentsline {section}{\numberline {1}Neural Networks}{161}{section.7.1}%
 \contentsline {section}{\numberline {2}Distributional Reinforcement Learning}{161}{section.7.2}%
 \contentsline {section}{\numberline {3}Deep Q-Networks}{162}{section.7.3}%
-\contentsline {section}{\numberline {4}Proximal Policy Gradient}{163}{section.7.4}%
-\contentsline {section}{\numberline {5}Advantage Estimation}{163}{section.7.5}%
-\contentsline {section}{\numberline {6}Variants to PPO}{163}{section.7.6}%
-\contentsline {section}{\numberline {7}Stable Baselines3}{163}{section.7.7}%
-\contentsline {chapter}{\numberline {A}5 Minuten Über Fraktale der Value function}{165}{appendix.A}%
-\contentsline {section}{\numberline {1}Paar Ideen}{167}{section.A.1}%
+\contentsline {section}{\numberline {4}Proximal Policy Gradient}{166}{section.7.4}%
+\contentsline {section}{\numberline {5}Advantage Estimation}{166}{section.7.5}%
+\contentsline {section}{\numberline {6}Variants to PPO}{166}{section.7.6}%
+\contentsline {section}{\numberline {7}Stable Baselines3}{166}{section.7.7}%
+\contentsline {chapter}{\numberline {A}5 Minuten Über Fraktale der Value function}{167}{appendix.A}%
+\contentsline {section}{\numberline {1}Paar Ideen}{169}{section.A.1}%
 \contentsfinish 
