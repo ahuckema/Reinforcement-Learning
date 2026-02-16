@@ -213,12 +213,12 @@ The idea is now threefold. Because the gradient is an expectation, we need to sa
     \item Reduce updates:
     \item Reduce variance: Subtracting a Basline can reduce variance. We choose the Baseline as the Value function, i.e. 
     \[
-    \nabla_\theta V^{\pi_\theta} (s) = \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_\theta} [\nabla_{\theta} \log(\pi_\theta (A_t;S_t)) (Q_t^{\pi_\theta} -V_t^{\pi_\theta})_{=: A_t^{\pi_\theta} }  ],
+    \nabla_\theta V^{\pi_\theta} (s) = \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_\theta} [\nabla_{\theta} \log(\pi_\theta (A_t;S_t)) \underbrace{(Q_t^{\pi_\theta} -V_t^{\pi_\theta})}_{=: A_t^{\pi_\theta} }  ],
     \]
     where $A_t^{\pi_\theta}$ is called advantage function.\\
     Another way is to decouple sampling and updating, using importance sampling: 
     \[
-    \nabla_\theta V^{\pi_\theta} (s) = \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_{\theta^{old}}} \left[ \sum_{i=0}^t \frac{\pi_\theta (A_i;S_i)}{\pi_{\theta^{old}} (A_i;S_i)} \nabla_\theta \log (\pi_\theta (A_t;S_t) ) A_t^{\pi_\theta} (S_t,A_t) \right].
+    \nabla_\theta V^{\pi_\theta} (s) = \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_{\theta^{old}}} \left[ \prod_{i=0}^t \frac{\pi_\theta (A_i;S_i)}{\pi_{\theta^{old}} (A_i;S_i)} \nabla_\theta \log (\pi_\theta (A_t;S_t) ) A_t^{\pi_\theta} (S_t,A_t) \right].
     \]
 \end{itemize}
 Thus the current policy needs to be evaluted and $A_t^{\pi_{\theta}}$ needs to be computed. The alternation between gradient steps and policy evalutaiton is called actor critic. A2C does this by using neural networks to parameterize the Advantage function and uses GAE for advantage estimation.\\
@@ -237,12 +237,124 @@ Usually $\gamma$ is ignored, but this is required???\\
     \end{itemize}
 }
 
+\begin{align*}
+    &\nabla_\theta J(\theta) = \sum_{t=0}^{T-1} \gamma^t \prod_{i=0}^t \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\pi_\theta(A_i;S_i) }{\pi_{\theta^{old}} (A_i;S_i)} \nabla_\theta \log (\pi_\theta (A_i;S_i)) A_t^{\pi_\theta} (S_t,A_t)  ]\\
+    &\stackrel{(*)}{\approx} \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)} \nabla_\theta \log (\pi_\theta (A_t;S_t)) A_t^{\pi_{\theta^{old}}} (S_t,A_t)  ]\\
+    &\stackrel{logTrick}{=} \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\nabla_{\theta} \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)}  A_t^{\pi_{\theta^{old}}} (S_t,A_t)  ]\\
+    &\stackrel{(**)}{\approx} \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\nabla_{\theta} \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}}} \textbf{1}_{\left|  \frac{\nabla_{\theta} \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)} -1 \right| \leq \frac{1}{\epsilon}}  A_t^{\pi_{\theta^{old}}} (S_t,A_t)  ]\\
+    &= T \mathbb{E}^{U \sim \mathcal{U}(\{0,...,T-1\})} \left[  \gamma^U \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\nabla_{\theta} \pi_\theta(A_U;S_U) }{\pi_{\theta^{old}}} \textbf{1}_{\left|  \frac{\nabla_{\theta} \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)} -1  \right| \leq \frac{1}{\epsilon}}  A_U^{\pi_{\theta^{old}}} (S_U,A_U)  ] \right]\\
+    &=: g_{PPO}^{clip}(\theta,\theta^{old}).
+\end{align*}
+In the last equality we interpreted $\frac{1}{T} \sum_{t=0}^{T-1}$ as an expactation of a uniform random variable on $\{0,...,T-1\}$. The unclipped version we define as 
+\[
+g_{PPO}(\theta,\theta^{old}) := T \mathbb{E}^{U \sim \mathcal{U}(\{0,...,T-1\})} \left[  \gamma^U \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\nabla_{\theta} \pi_\theta(A_U;S_U) }{\pi_{\theta^{old}}}  A_U^{\pi_{\theta^{old}}} (S_U,A_U)  ] \right].
+\]
+\rmkb{
+    (*)\\
+    Define 
+    \begin{align*}
+        & M_{ean} \; TV(\pi_{\theta^{old}},\pi_\theta) := \frac{1}{T} \sum_{t=0}^{T-1} \mathbb{E}_\mu^{\pi_{\theta^{old}}} [ TV (\pi_{\theta^{old}} (\cdot; S_t), \pi_\theta (\cdot,S_t) ) ],\\
+        & M_{ax} \; TV(\pi_{\theta^{old}},\pi_\theta) := \max_{t=0,...,T-1} \mathbb{E}_\mu^{\pi_{\theta^{old}}} [ TV (\pi_{\theta^{old}} (\cdot; S_t), \pi_\theta (\cdot,S_t) ) ].
+    \end{align*}
+    This yields 
+    \[
+    \| \nabla_\theta J(\theta) - g_{PPO} (\theta,\theta^{old}) \| \leq const. \min \{  M_{ean} \; TV(\pi_{\theta^{old}},\pi_\theta) ,M_{ax} \; TV(\pi_{\theta^{old}},\pi_\theta)\}.
+    \]
+    To show this inquality one would first show that 
+    \[
+    \nabla_\theta J(\theta) = \nabla_\theta ( V^{\pi_\theta} (\mu)- V^{\pi_{\theta^{old}}} (\mu) ) = \nabla_\theta \sum_{t=0}^{T-1} \gamma^t \mathbb{E}_\mu^{\pi_\theta} [ A_t^{\pi_{\theta^{old}}} (S_t,A_t) ].
+    \]
+    and that 
+    \[
+    \nabla_\theta J(\theta) - g_{PPO} (\theta,\theta^{old}) = \sum_{t=0}^{T-1} \gamma^t \nabla_\theta \left( \mathbb{E}^{\pi_\theta} \left[ \mathbb{E}_{A \sim \pi_\theta (\cdot;S_t)} [A_t^{\pi_{\theta^{old}}} (S_t,A_t)] \right] -\mathbb{E}^{\pi_{\theta^{old}}} \left[ \mathbb{E}_{A \sim \pi_\theta (\cdot;S_t)} [A_t^{\pi_{\theta^{old}}} (S_t,A_t)] \right]\right)
+    \]
+}
+\rmkb{(**)\\
+}
+\thm{}{
+    Under the assumptions stated in the beginning 
+    \[
+    \exists R>0: \quad |\nabla_\theta J(\theta) - g_{PPO}^{clip} (\theta,\theta^{old})| \leq R |\theta - \theta^{old} |.
+    \]
+}
+This theorem shows that as long as the parameters remain in proximity (trust region) of $\theta^{old}$ the bias in the gradient stepp will also be bounded. Thus, $g_{PPO}^{clip}$ with all its advantages (less correcaltion, mini batches of transitions and not entire rollouts and more value network updates (???)) is applicable.\\
+The two expectations are approximated every cycle (Dataset containing transitions from $\pi^{old}$)
+
 
 \section{Advantage Estimation}
+Given $\hat{V}$ the one step TD-error at time $t$ is 
+\[
+\delta_t := R_t + \gamma \hat{V} (S_{t+1}) - \hat{V} (S_t).
+\]
+If $\hat{V} = V^\pi$ then $\delta_t$ is unbiased:
+\[
+\mathbb{E}[\delta_t \mid S_t,A_t] = \mathbb{E}[R_t + \gamma V^\pi (S_{t+1}) \mid S_t,A_t] - \mathbb{E}[ V^\pi (S_t) \mid S_t,A_t] \stackrel{measurable}{=} Q^\pi (S_t,A_t) -V^\pi (S_t) =A^\pi (S_t,A_t).
+\]
+The $k$-step advantage is 
+\[
+\hat{A}_t^{(k)} := \sum_{l=0}^k \gamma^l \delta_{t+l} = \sum_{l=0}^k \gamma^l R_{t+l} + \gamma^{k+1} \hat{V} (S_{t+k+1}) - \hat{V} (S_t).
+\]
+If $\hat{V} = V^\pi$, then again 
+\[
+\mathbb{E}[\hat{A}_t^{(k)}  \mid S_t,A_t] =A^\pi (S_t,A_t)    
+\]
+is unbiased. 
+\rmkb{
+    The GAE (General advantage estimator) combines all $k$-step estimators using exponentially decaying weights controlled by $\lambda \in [0,1]$: 
+    \[
+    \hat{A}_t^{GAE(\lambda)} := (1-\lambda) \sum_{k=0}^\infty \lambda^k \hat{A}_t^{(k)}.
+    \]
+    Equivalently it can be recursively defined 
+    \[
+    \hat{A}_t^{GAE(\lambda)} := \delta_t + \gamma \lambda \hat{A}_{t+1}^{GAE(\lambda)} .
+    \]
+    For $\lambda =0$ it is one step TD-error $\delta_t$. For $\delta \to 1$ it is the Monte Carlo estimator minus the current value function.\\
+    Note that this estimator assume access to all $k$-step estimators, i.e. access to infinite trajectories. In practice, trajectories are never infinite. So it is reasonable to only consider a finite time horizon.
+}
+\rmkb{
+    Fixed-Time Advantage estimation: Here the infinite exponential weighing has to be corrected for the finite time horizon. $\forall t <T < \infty$ define 
+    \[
+    \hat{A}_t^T := \frac{1-\lambda}{1-\lambda^{T-t}} \sum_{k=0}^{T-t-1} \lambda^k \hat{A}_t^{(k)}, 
+    \]
+    where $\hat{A}_t^{(k)}$ is again the $k$-step advantage. The normalization factor $\frac{1-\lambda}{1-\lambda^{T-t}}$ ensures that the weights sum to one. This is the finite horizon analogue to GAE.
+}
+\lem{Backward Recursion fixed time}{
+For $\hat{A}_T^T =0$, it holds $\forall t < T:$
+\[
+\hat{A}_t^T = \delta_t + \gamma \lambda \frac{1-\lambda^{T-t-1} }{1-\lambda^{T-t}} \hat{A}_{t+1}^T.
+\]
+}
+Note that $\frac{1-\lambda^{T-t-1} }{1-\lambda^{T-t}} $ approaches one as $t \to T$.
+\rmkb{
+    Often trajectories end when reaching a terminating state. In such a cases it no longer makes sense to consider $k$-step averages beyond that point. So our estimator depends on this stopping time. Define the natural filtration $(\mathcal{F}_t)_{t \geq 0}$ by 
+    \[
+    \mathcal{F}_t := \sigma (S_0,A_0,R_0,...,S_t,A_t),
+    \]
+    all information up to time $t$. Define 
+    \[
+    \tilde{\tau} := \inf \{t \geq 0 \mid S_t \text{ is terminal }\}
+    \]
+    which is a stopping time wrt. $(\mathcal{F}_t)_{t \geq 0}$. Assume that $\tilde{\tau}$ is finite, then for fixed $T>0$ define $\tau := \tilde{\tau} \wedge T$. Define 
+    \[
+    \hat{A}_t^\tau := \frac{1-\lambda}{1-\lambda^{\tau-t}} \sum_{k=0}^{\tau-t-1} \lambda^k \hat{A}_t^{(k)}.
+    \]
+    If $\tau =T$, then we have the finite-horizon version $\hat{A}_t^T$.
+}
+\lem{}{
+    Let $\hat{A}_\tau^\tau =0$, then 
+    \[
+    \hat{A}_t^\tau = \delta_t + \gamma \lambda \frac{1-\lambda^{\tau-t-1}}{1-\lambda^{\tau-t}} \hat{A}_{t+1}^\tau.
+    \]
+}
 
 \section{Variants to PPO}
 
 \section{Stable Baselines3}
+\begin{itemize}
+    \item ReplayBuffer: Off Policy, it fills the Buffer wrt. some behavioral policy and then samples uniformly, the mini batches with whom the gradient steps are done. After the epoch is finished, the samples are put back. If the Buffer reaches its memory limitations, samples are discarded according to FIFO.
+    \item RolloutBuffer: On Policy, it stores entire trajectories of the current policy. However, after an epoch it completely resets. It computes the GAE for fixed time via the backward recursion.
+    \item NStepReplayBuffer: It follows some behavioral policy (off policy) to estimate n step advantages.
+\end{itemize}
 
 \section{Hyperparameter Tuning}
 
