@@ -241,8 +241,8 @@ Usually $\gamma$ is ignored, but this is required???\\
     &\nabla_\theta J(\theta) = \sum_{t=0}^{T-1} \gamma^t \prod_{i=0}^t \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\pi_\theta(A_i;S_i) }{\pi_{\theta^{old}} (A_i;S_i)} \nabla_\theta \log (\pi_\theta (A_i;S_i)) A_t^{\pi_\theta} (S_t,A_t)  ]\\
     &\stackrel{(*)}{\approx} \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)} \nabla_\theta \log (\pi_\theta (A_t;S_t)) A_t^{\pi_{\theta^{old}}} (S_t,A_t)  ]\\
     &\stackrel{logTrick}{=} \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\nabla_{\theta} \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)}  A_t^{\pi_{\theta^{old}}} (S_t,A_t)  ]\\
-    &\stackrel{(**)}{\approx} \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\nabla_{\theta} \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}}} \textbf{1}_{\left|  \frac{\nabla_{\theta} \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)} -1 \right| \leq \frac{1}{\epsilon}}  A_t^{\pi_{\theta^{old}}} (S_t,A_t)  ]\\
-    &= T \mathbb{E}^{U \sim \mathcal{U}(\{0,...,T-1\})} \left[  \gamma^U \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\nabla_{\theta} \pi_\theta(A_U;S_U) }{\pi_{\theta^{old}}} \textbf{1}_{\left|  \frac{\nabla_{\theta} \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)} -1  \right| \leq \frac{1}{\epsilon}}  A_U^{\pi_{\theta^{old}}} (S_U,A_U)  ] \right]\\
+    &\stackrel{(**)}{\approx} \sum_{t=0}^{T-1} \gamma^t \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\nabla_{\theta} \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}}} \textbf{1}_{\left|  \frac{ \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)} -1 \right| \leq \frac{1}{\epsilon}}  A_t^{\pi_{\theta^{old}}} (S_t,A_t)  ]\\
+    &= T \mathbb{E}^{U \sim \mathcal{U}(\{0,...,T-1\})} \left[  \gamma^U \mathbb{E}^{\pi_{\theta^{old}}} [ \frac{\nabla_{\theta} \pi_\theta(A_U;S_U) }{\pi_{\theta^{old}}} \textbf{1}_{\left|  \frac{ \pi_\theta(A_t;S_t) }{\pi_{\theta^{old}} (A_t;S_t)} -1  \right| \leq \frac{1}{\epsilon}}  A_U^{\pi_{\theta^{old}}} (S_U,A_U)  ] \right]\\
     &=: g_{PPO}^{clip}(\theta,\theta^{old}).
 \end{align*}
 In the last equality we interpreted $\frac{1}{T} \sum_{t=0}^{T-1}$ as an expactation of a uniform random variable on $\{0,...,T-1\}$. The unclipped version we define as 
@@ -280,8 +280,38 @@ g_{PPO}(\theta,\theta^{old}) := T \mathbb{E}^{U \sim \mathcal{U}(\{0,...,T-1\})}
 This theorem shows that as long as the parameters remain in proximity (trust region) of $\theta^{old}$ the bias in the gradient stepp will also be bounded. Thus, $g_{PPO}^{clip}$ with all its advantages (less correcaltion, mini batches of transitions and not entire rollouts and more value network updates (???)) is applicable.\\
 The two expectations are approximated every cycle (Dataset containing transitions from $\pi^{old}$)
 
+\begin{algorithm}[H]
+\SetKwInput{Data}{Data}
+\SetKwInput{Result}{Result}
+\SetAlgoLined
+\DontPrintSemicolon
+\SetKwInOut{Require}{Require}
+\SetKwComment{Comment}{$\triangleright$ }{}
+\SetKwFor{For}{for}{ do}{end for}
+\LinesNumbered
+\caption{Cyclic Reshuffled PPO Surrogate Ascent}
+\Require{Initial $\theta$, stepsize $\eta$, cycles $C$, epochs $K$, batch size $B$, $m := N/B$.}
+\For{$c = 0, \dots, C - 1$ \Comment*[r]{cycles}}{
+    $\theta_{\text{old}} \leftarrow \theta$ \Comment*[r]{fixed sampling parameter}
+    Sample $n$ rollouts under $\pi_{\theta_{\text{old}}}$\;
+    Estimate advantages $\hat{A}$ \Comment*[r]{critic step, e.g. using GAE}
+    Fill buffer $\{(s^i, a^i, r^i, \hat{A}^i, t^i)\}_{i=0}^{N-1}$\;
+    \For{$e = 0, \dots, K - 1$ \Comment*[r]{epoch}}{
+        Draw a random permutation $\sigma = (\sigma_0, \dots, \sigma_{N-1})$\;
+        \For{$k = 0, \dots, m - 1$ \Comment*[r]{minibatch updates}}{
+            $\mathcal{B}_k \leftarrow \{\sigma_{kB}, \dots, \sigma_{(k+1)B-1}\}$\;
+            Compute $\hat{g}^{\text{clip}}(\theta, \theta_{\text{old}}; \mathcal{B}_k)= \frac{1}{B} \sum_{i\in \mathcal{B}_k} T \gamma^{t_i} \frac{\nabla_\theta \pi_\theta (a^{i},s^{i})}{\pi_{\theta^{old}} (a^{i},s^{i}) } \textbf{1}_{\frac{ \pi_\theta (a^{i},s^{i})}{\pi_{\theta^{old}} (a^{i},s^{i}) }} $ \;
+            $\theta_{c,e,k+1} \leftarrow \theta_{c,e,k} + \eta \, \hat{g}^{\text{clip}}(\theta_{c,e,k}, \theta_{\text{old}}; \mathcal{B}_k)$ 
+        }
+    }
+}
+\end{algorithm}
+Here $\theta_{c,e,k}$ denote the parameter at the cycle, epoch and minibatch.
 
 \section{Advantage Estimation}
+\rmkb{
+    GAE for infinite MDPs: Uses the $k$-step Bellman expectation operator. For large $k$ we have Monte carlo and high variance. For small $k$ we have high bias. 
+}
 Given $\hat{V}$ the one step TD-error at time $t$ is 
 \[
 \delta_t := R_t + \gamma \hat{V} (S_{t+1}) - \hat{V} (S_t).
@@ -300,17 +330,22 @@ If $\hat{V} = V^\pi$, then again
 \]
 is unbiased. 
 \rmkb{
-    The GAE (General advantage estimator) combines all $k$-step estimators using exponentially decaying weights controlled by $\lambda \in [0,1]$: 
+    The GAE (General advantage estimator) combines all $k$-step estimators using exponentially decaying weights controlled by $\lambda \in [0,1]$. Because the geometric distribution with $\mathbb{P}(X=k) =(1-\lambda)^{k-1} \lambda$ is the only memoryless distribution, it is compatible with the Markov property. $TD(\lambda)$ schemes interpolate between one step updates and Monte Carlo. The forward estimator extends the $n$-step advantage, which is not very efficient. The backward scheme uses past values for the update.
     \[
     \hat{A}_t^{GAE(\lambda)} := (1-\lambda) \sum_{k=0}^\infty \lambda^k \hat{A}_t^{(k)}.
+    \]
+    Using the telescoping sum, it can be rewritten as 
+    \[
+    \hat{A}_t^{GAE(\lambda)} = \sum_{l \in \mathbb{N}} (\gamma \lambda)^l \delta_{t+l}, \quad \delta_t = R_t + \gamma V(S_{t+1}) - V(S_t).
     \]
     Equivalently it can be recursively defined 
     \[
     \hat{A}_t^{GAE(\lambda)} := \delta_t + \gamma \lambda \hat{A}_{t+1}^{GAE(\lambda)} .
     \]
     For $\lambda =0$ it is one step TD-error $\delta_t$. For $\delta \to 1$ it is the Monte Carlo estimator minus the current value function.\\
-    Note that this estimator assume access to all $k$-step estimators, i.e. access to infinite trajectories. In practice, trajectories are never infinite. So it is reasonable to only consider a finite time horizon.
+    Note that this estimator assume access to all $k$-step estimators, i.e. access to infinite trajectories. In practice, trajectories are never infinite. So it is reasonable to only consider a finite time horizon. However, truncating the estimator destroys the geometric weighing.
 }
+
 \rmkb{
     Fixed-Time Advantage estimation: Here the infinite exponential weighing has to be corrected for the finite time horizon. $\forall t <T < \infty$ define 
     \[
@@ -318,6 +353,13 @@ is unbiased.
     \]
     where $\hat{A}_t^{(k)}$ is again the $k$-step advantage. The normalization factor $\frac{1-\lambda}{1-\lambda^{T-t}}$ ensures that the weights sum to one. This is the finite horizon analogue to GAE.
 }
+Heuristically, the forward estimator is least affected by bootstrapping, but it has higher variance, as it aggregates large discounted sums of TD errors. In general it is smart to choose $\lambda$ close to $1$ in the beginning, as then the advantages $A_t^k$ with larger $k$ (longer rollouts) are weighted stronger. This is because in the beginning the $l^2$ error of $V^\pi$ and its approximation is higher. As time progresses, one can then reduce $\lambda$, as the error of approximation decreases. This can also be seen in the following: 
+\begin{align*}
+   & \mathbb{E}_{s,a}^\pi \left[ \left( \sum_{t=0}^{n-1} \gamma^t R_t + \gamma^n Q(S_,A_n) - Q^\pi (s,a) \right)^2 \right] \\
+    &\leq \underbrace{\gamma^{2n} \mathbb{E}_{s,a}^\pi \left[ Q^\pi (S_n,A_n)-Q(S_n,A_n) \right]^2}_{\text{old estimation bias}} + \underbrace{\mathbb{V}_{s,a}^\pi \left[ \sum_{t=0}^{n-1} \gamma^t R_t \right] }_{\text{Monte Carlo Variance}}+ \underbrace{ \gamma^{2n} \mathbb{V}_{s,a}^\pi [ Q(S_n,A_n)]}_{\text{old estimation variance}}.
+\end{align*}
+If the old estimation bias is large (in the beginning) choose n large (because $\gamma^{2n}$ will be small).
+
 \lem{Backward Recursion fixed time}{
 For $\hat{A}_T^T =0$, it holds $\forall t < T:$
 \[
@@ -357,6 +399,20 @@ Note that $\frac{1-\lambda^{T-t-1} }{1-\lambda^{T-t}} $ approaches one as $t \to
 \end{itemize}
 
 \section{Hyperparameter Tuning}
+\rmkb{CMA ES:\\
+To minimize $f:\mathbb{R}^d \to \mathbb{R}$ we iteratively update a sequence of $X^n \sim \mathcal{N}(m_n,\sigma_n^2 C_n)$ from which in each step $N$ samples are drawn, i.e. $\forall n \in \mathbb{N}$ sample $X_1^{(n)},...,X_N^{(n)} \sim \mathcal{N}(m_n,\sigma^2_n C_n)$ and order them such that 
+\[
+f(X_{1:N}^{(n)} \leq \cdots \leq f(X_{N:N}^{(n)} ) ).
+\]
+From the $K<N$ best candidates choose the next parameters as 
+\[
+m^{n+1} := \sum_{i=0}^K w_i X_{N-i:N}^{(n)}, \quad \text{where } w_1 > \cdots > w_K.
+\]
+}
+
+\rmkb{
+    Pruning Trials:
+}
 
 
 \end{document}
