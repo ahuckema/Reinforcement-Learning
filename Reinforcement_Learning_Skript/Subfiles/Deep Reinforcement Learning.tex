@@ -53,6 +53,13 @@ i.e.  the distribution
 (\mathcal{T}^\pi \nu)_{s,a} (\phi) := \mathbb{E}_{s,a}^\pi [ ( (\nu (S^\prime,A^\prime))_{D_\gamma} * \delta_R ) (\phi) ] = \sum_{s^\prime,a^\prime,r} \pi (a^\prime;s^\prime) p(s^\prime,r;s,a) ((\nu_{s^\prime,a^\prime})_{D_\gamma} * \delta_r )(\phi)
 \]
  
+\rmkb{C51:\\
+Consider the Hilbert space 
+\[
+\left( \mathcal{P}([V_{min},V_{max}]), l_2 (\nu,\mu) := (\int_{\mathbb{R}} (F_\nu (x) - F_\mu (x))^2 dx )^{1/2} \right).
+\]
+For step size $\tau$ we denote the grid points of the equidistant grid on $[V_{min},V_{max}]$ as $z_i := V_{min} + i \tau$. Denote by $S_h$ the space of continuous, piecewise linear functions. Let $\phi_i (x)$ be hat functions. 
+}
 
 \section{Deep Q-Networks}
 Deep Q-Networks (DQN) is a Q-learning variant that utilizes deep neural networks to approximate the Q-value. This algorithm addresses how to deal with large, continuous state action spaces $(\mathcal{S},\mathcal{A})$. The idea is to reduce dimensionality by plugging in the state space $\mathcal{S}$ (e.g. pixels in an Atari game) into a convolutional neural layer, which is the fed into a feed forward neural network that outputs the Q-value for each action $a \in \mathcal{A}$. Problems with simple neural networks are 
@@ -190,13 +197,51 @@ Copy weights to target network: $\theta^- \leftarrow \theta$\;
             &=(1-\alpha) Q^A (s,a) + \alpha \left( r + \gamma Q^A (s^\prime , \arg \max_{a^\prime \in \mathcal{A}} Q^{A} (s^\prime, a^\prime )) \right) \\
             &+\gamma \left( Q^B (s^\prime,\arg \max_{a^\prime \in \mathcal{A}} (s^\prime,a^\prime)) - Q^{A} (s^\prime,\arg \max_{a^\prime \in \mathcal{A}} Q^{A} (s^\prime,a^\prime)) \right).
         \end{align*}
+        A Bernoulli random variable chooses weather to update $Q^{A}$ or $Q^B$. For $Q^B$ the update scheme is analogously reversed.\\
         In Double Q-learning the Networks are updated in every step and independendly. In Double DQN we give one network the role of the target network and the other the Q-network. The Q-network is updated every step. The target network is updated only every N step with the soft update rule, which depends on the Q-network. So indepence and simultaninous updates do not happen.
-        \item Clipped Double Q/TD3: Another approach is to clip the bias term (third summand in the above) by taking its negative part: $b^- := \min \{b,0\}$. The deep variant of this method is called Twin delayed double Deep Q Networks.
+        \item Clipped double Q: The bias term 
+        \[
+    b(s,a):=\gamma \left( Q^B (s^\prime,\arg \max_{a^\prime \in \mathcal{A}} (s^\prime,a^\prime)) - Q^{A} (s^\prime,\arg \max_{a^\prime \in \mathcal{A}} Q^{A} (s^\prime,a^\prime)) \right)
+    \]
+    is clipped, such that only the negative part is taken, i.e. $- \min \{0,b(s,a)\}$. The deep variant of this method is called Twin delayed double Deep Q Networks (TD3).
+    \end{itemize}
+
+    
+}
+\rmkb{
+    In general the Idea in Q-learning is to minimize the squared loss, however, empirically minimizing the Huber loss, has shown to be better. Consider the TD-error: 
+    \[
+    \delta = r + \gamma \max_{a^\prime \in \mathcal{A}} Q^{\theta^-} (s^\prime,a^\prime) -Q^\theta (s,a).
+    \]
+    Then we only take the quadratic loss below a threshold $\tau$ usually chosen as 1. The Huber loss is 
+    \[
+    L_\tau (\delta) := \begin{cases}
+        \frac{1}{2} \delta^2 & |\delta | \leq \tau \\
+        \tau (|\delta|-\frac{\tau}{2}) & |\delta| >\tau
+    \end{cases}.
+    \]
+    This prevents large gradients and stabilizes training, as large updates are avoided.
+}
+\rmkb{
+    To make Atari environments less deterministic, i.e. encouraging robust policies, the following can be used 
+    \begin{itemize}
+        \item Noisy Networks: Adds noise to network weights. This adds noise to the network, but not to the environment
+        \item Sticky actions: With some probability repreat the previous action, even if it is not chosen by the algorithm 
+        \item Random frame skipping 
+        \item Random action: Ocassionally choose a random action, even though the policy suggests a different one 
+    \end{itemize}
+    DQN in stable Baselines3: Hyperparameters to be tuned 
+    \begin{itemize}
+        \item Feature extractor: Argument that descides the network architecture to extract features from inputs, i.e. reduce dimensionality (for example CNN) 
+        \item Replay Buffer size: Recommended: 1 million transitions, which corresponds to 56 GB of memory 
+        \item Learning starts: SB3 delays learning until buffer has sufficiently been filled 
+        \item Batch size: number of samples per gradient step 
+        \item Soft/hard target update 
+        \item n env: number of parallel environments 
+        \item Multi-step return: trajectory sampling which corresponds to the n-step Bellman operator 
+        \item Huber loss and clipping
     \end{itemize}
 }
-
-
-
 
 \section{Proximal Policy Gradient}
 Consider a finite time MDP and the respective Value/Q-functions:
@@ -307,6 +352,13 @@ The two expectations are approximated every cycle (Dataset containing transition
 }
 \end{algorithm}
 Here $\theta_{c,e,k}$ denote the parameter at the cycle, epoch and minibatch.
+
+\rmkb{
+    A necessary condition for reaching a neighborhood of a stationary point is 
+    \[
+    \min_{c,e} \mathbb{E}[|\nabla J(\theta_{c,\theta,0}|^2] \leq const. (\eta,p,q), \quad p,q \in (0,1) \text{ arbitrary and } \quad \eta\leq \frac{1}{Lm}.
+    \]
+}
 
 \section{Advantage Estimation}
 \rmkb{
