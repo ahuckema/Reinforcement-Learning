@@ -181,7 +181,7 @@ Further let the joint distribution $(X,A)$ is given by
 $$
 f_{X,A} (x,a) = \Lambda_a (dx) \cdot \mathbb{P}^X (dx) = e^{Q_a \theta_a} e^{-x} \cdot e^{-\sum_{a =1}^K e^{Q_a \theta_a} e^{-x}}.
 $$
-Then 
+Then    
 \begin{align*}
     \mathbb{P}(A=a \mid X=x) &= \frac{f_{X,A}(x,a)}{\sum_{b=1}^K f_{X,A}(x,b)} \\
     &= \frac{e^{Q_a \theta_a} e^{-x} \cdot e^{-\sum_{a =1}^K e^{Q_a \theta_a} e^{-x}}}{\sum_{b=1}^K e^{Q_b \theta_b} e^{-x} \cdot e^{-\sum_{c =1}^K e^{Q_c \theta_c} e^{-x}}} \\

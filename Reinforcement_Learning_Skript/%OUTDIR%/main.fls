@@ -2,15 +2,8 @@ PWD /Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Re
 INPUT /usr/local/texlive/2025/texmf.cnf
 INPUT /usr/local/texlive/2025/texmf-dist/web2c/texmf.cnf
 INPUT /usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt
-INPUT /Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/Subfiles/Deep Reinforcement Learning.tex
-OUTPUT Subfiles/Deep Reinforcement Learning.log
-INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/subfiles/subfiles.cls
-INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/subfiles/subfiles.cls
-INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/import/import.sty
-INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/import/import.sty
-INPUT Subfiles/../main.tex
-INPUT Subfiles/../main.tex
-INPUT Subfiles/../main.tex
+INPUT /Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/main.tex
+OUTPUT %OUTDIR%/main.log
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/base/book.cls
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/base/book.cls
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/base/bk12.clo
@@ -238,7 +231,7 @@ INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libr
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryfadings.code.tex
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/pgf/libraries/pgflibraryfadings.code.tex
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/pgf/libraries/pgflibraryfadings.code.tex
-OUTPUT Subfiles/Deep Reinforcement Learning.pdf
+OUTPUT %OUTDIR%/main.pdf
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/tcolorbox/tcbposter.code.tex
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryshadows.code.tex
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryshadows.code.tex
@@ -279,6 +272,8 @@ INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/enumitem/enumitem.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/enumitem/enumitem.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/subfiles/subfiles.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/subfiles/subfiles.sty
+INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/import/import.sty
+INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/import/import.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/amscls/amsthm.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/amscls/amsthm.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amssymb.sty
@@ -438,10 +433,10 @@ INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/relsize/relsize.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/pgf/libraries/pgflibraryarrows.meta.code.tex
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/pgf/libraries/pgflibraryarrows.meta.code.tex
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/pgf/libraries/pgflibraryarrows.meta.code.tex
-INPUT Subfiles/Deep Reinforcement Learning.aux
-INPUT Subfiles/Deep Reinforcement Learning.aux
-INPUT Subfiles/Deep Reinforcement Learning.aux
-OUTPUT Subfiles/Deep Reinforcement Learning.aux
+INPUT %OUTDIR%/main.aux
+INPUT %OUTDIR%/main.aux
+INPUT %OUTDIR%/main.aux
+OUTPUT %OUTDIR%/main.aux
 INPUT /usr/local/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 INPUT /usr/local/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 INPUT /usr/local/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
@@ -450,29 +445,32 @@ INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.st
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
-INPUT Subfiles/Deep Reinforcement Learning.out
-INPUT Subfiles/Deep Reinforcement Learning.out
-INPUT Subfiles/Deep Reinforcement Learning.out
-INPUT Subfiles/Deep Reinforcement Learning.out
-INPUT Subfiles/Deep Reinforcement Learning.out
-INPUT Subfiles/Deep Reinforcement Learning.out
-OUTPUT Subfiles/Deep Reinforcement Learning.out
+INPUT %OUTDIR%/main.out
+INPUT %OUTDIR%/main.out
+INPUT %OUTDIR%/main.out
+INPUT %OUTDIR%/main.out
+INPUT %OUTDIR%/main.out
+INPUT %OUTDIR%/main.out
+OUTPUT %OUTDIR%/main.out
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/ragged2e/ragged2e.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/ragged2e/ragged2e.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/ragged2e/ragged2e.sty
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/biblatex/lbx/english.lbx
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/biblatex/lbx/english.lbx
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/biblatex/lbx/english.lbx
-OUTPUT Subfiles/Deep Reinforcement Learning.bcf
-INPUT Subfiles/Deep Reinforcement Learning.bbl
-INPUT Subfiles/Deep Reinforcement Learning.bbl
-INPUT Subfiles/Deep Reinforcement Learning.bbl
-INPUT Subfiles/Deep Reinforcement Learning.bbl
-INPUT Subfiles/Deep Reinforcement Learning.bbl
+OUTPUT %OUTDIR%/main.bcf
+INPUT main.bbl
+INPUT ./main.bbl
+INPUT ./main.bbl
+INPUT ./main.bbl
+INPUT main.bbl
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecrm2488.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx2488.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecrm1728.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx1728.tfm
+INPUT /usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc
+INPUT %OUTDIR%/main.toc
+INPUT %OUTDIR%/main.toc
+INPUT %OUTDIR%/main.toc
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx1200.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmr8.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmr6.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmmi12.tfm
@@ -496,39 +494,146 @@ INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/umsb.fd
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm
-INPUT /usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx1200.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx1440.tfm
+OUTPUT %OUTDIR%/main.toc
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx2488.tfm
+INPUT ./Subfiles/Bandits.tex
+INPUT ./Subfiles/Bandits.tex
+INPUT Subfiles/Bandits.tex
+INPUT ./Subfiles/Bandits.tex
+INPUT ./Subfiles/Bandits.tex
+INPUT Subfiles/Bandits.tex
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecrm1728.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx1728.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/tcrm1200.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecrm0800.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam5.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm5.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecrm0600.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx0800.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx0600.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/tcrm1200.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbx1440.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecti1200.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecbi1200.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecrm1440.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmr12.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmmi12.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam7.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam5.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm5.tfm
+INPUT ./Subfiles/Dynamic Programming.tex
+INPUT ./Subfiles/Dynamic Programming.tex
+INPUT Subfiles/Dynamic Programming.tex
+INPUT ./Subfiles/Dynamic Programming.tex
+INPUT ./Subfiles/Dynamic Programming.tex
+INPUT Subfiles/Dynamic Programming.tex
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecti0800.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ecti0600.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/ectt1200.tfm
-INPUT Subfiles/Deep Reinforcement Learning.aux
-INPUT Subfiles/Deep Reinforcement Learning.out
-INPUT Subfiles/Deep Reinforcement Learning.out
-INPUT Subfiles/Deep Reinforcement Learning.run.xml
-OUTPUT Subfiles/Deep Reinforcement Learning.run.xml
+INPUT ./Pictures/Map.png
+INPUT ./Pictures/Map.png
+INPUT ./Pictures/Map.png
+INPUT ./Pictures/Map.png
+INPUT ./Pictures/Map.png
+INPUT ./Subfiles/Monte Carlo.tex
+INPUT ./Subfiles/Monte Carlo.tex
+INPUT Subfiles/Monte Carlo.tex
+INPUT ./Subfiles/Monte Carlo.tex
+INPUT ./Subfiles/Monte Carlo.tex
+INPUT Subfiles/Monte Carlo.tex
+INPUT ./Subfiles/Finite Time MDPs.tex
+INPUT ./Subfiles/Finite Time MDPs.tex
+INPUT Subfiles/Finite Time MDPs.tex
+INPUT ./Subfiles/Finite Time MDPs.tex
+INPUT ./Subfiles/Finite Time MDPs.tex
+INPUT Subfiles/Finite Time MDPs.tex
+INPUT ./Subfiles/Stochastic Fixed Point Iterations.tex
+INPUT ./Subfiles/Stochastic Fixed Point Iterations.tex
+INPUT Subfiles/Stochastic Fixed Point Iterations.tex
+INPUT ./Subfiles/Stochastic Fixed Point Iterations.tex
+INPUT ./Subfiles/Stochastic Fixed Point Iterations.tex
+INPUT Subfiles/Stochastic Fixed Point Iterations.tex
+INPUT ./Pictures/Subderivatives.png
+INPUT ./Pictures/Subderivatives.png
+INPUT Pictures/Subderivatives.png
+INPUT ./Pictures/Subderivatives.png
+INPUT ./Pictures/Subderivatives.png
+INPUT ./Pictures/Contraction.png
+INPUT ./Pictures/Contraction.png
+INPUT Pictures/Contraction.png
+INPUT ./Pictures/Contraction.png
+INPUT ./Pictures/Contraction.png
+INPUT ./Subfiles/Sample based dynamic Programming.tex
+INPUT ./Subfiles/Sample based dynamic Programming.tex
+INPUT Subfiles/Sample based dynamic Programming.tex
+INPUT ./Subfiles/Sample based dynamic Programming.tex
+INPUT ./Subfiles/Sample based dynamic Programming.tex
+INPUT Subfiles/Sample based dynamic Programming.tex
+INPUT ./Pictures/Q-learning Drawbacks.png
+INPUT ./Pictures/Q-learning Drawbacks.png
+INPUT Pictures/Q-learning Drawbacks.png
+INPUT ./Pictures/Q-learning Drawbacks.png
+INPUT ./Pictures/Q-learning Drawbacks.png
+INPUT ./Subfiles/Gradient Descent Methods.tex
+INPUT ./Subfiles/Gradient Descent Methods.tex
+INPUT Subfiles/Gradient Descent Methods.tex
+INPUT ./Subfiles/Gradient Descent Methods.tex
+INPUT ./Subfiles/Gradient Descent Methods.tex
+INPUT Subfiles/Gradient Descent Methods.tex
+INPUT ./Pictures/PL-Inequality.png
+INPUT ./Pictures/PL-Inequality.png
+INPUT Pictures/PL-Inequality.png
+INPUT ./Pictures/PL-Inequality.png
+INPUT ./Pictures/PL-Inequality.png
+INPUT ./Subfiles/Policy Gradient Methods.tex
+INPUT ./Subfiles/Policy Gradient Methods.tex
+INPUT Subfiles/Policy Gradient Methods.tex
+INPUT ./Subfiles/Policy Gradient Methods.tex
+INPUT ./Subfiles/Policy Gradient Methods.tex
+INPUT Subfiles/Policy Gradient Methods.tex
+INPUT ./Subfiles/Deep Reinforcement Learning.tex
+INPUT ./Subfiles/Deep Reinforcement Learning.tex
+INPUT Subfiles/Deep Reinforcement Learning.tex
+INPUT ./Subfiles/Deep Reinforcement Learning.tex
+INPUT ./Subfiles/Deep Reinforcement Learning.tex
+INPUT Subfiles/Deep Reinforcement Learning.tex
+INPUT ./Subfiles/Zusatz.tex
+INPUT ./Subfiles/Zusatz.tex
+INPUT Subfiles/Zusatz.tex
+INPUT ./Subfiles/Zusatz.tex
+INPUT ./Subfiles/Zusatz.tex
+INPUT Subfiles/Zusatz.tex
+INPUT %OUTDIR%/main.aux
+INPUT %OUTDIR%/main.out
+INPUT %OUTDIR%/main.out
+INPUT %OUTDIR%/main.run.xml
+OUTPUT %OUTDIR%/main.run.xml
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex7.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex8.pfb
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfbi1200.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfbx0800.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb

@@ -48,18 +48,66 @@ i.e.  the distribution
 \[
     \mathcal{T}^\pi: (\mathcal{P}(\mathbb{R}))^{\mathcal{S} \times \mathcal{A}} \to (\mathcal{P}(\mathbb{R}))^{\mathcal{S} \times \mathcal{A}}, (\nu_{s,a})_{(s,a) \in \mathcal{S} \times \mathcal{A}} \mapsto ((\mathcal{T}^\pi \nu)_{s,a})_{(s,a) \in \mathcal{S} \times \mathcal{A}} 
     \]
-    is point wise defined for all $\phi \in C_b (\mathbb{R})$ as
+    is
 \[
-(\mathcal{T}^\pi \nu)_{s,a} (\phi) := \mathbb{E}_{s,a}^\pi [ ( (\nu (S^\prime,A^\prime))_{D_\gamma} * \delta_R ) (\phi) ] = \sum_{s^\prime,a^\prime,r} \pi (a^\prime;s^\prime) p(s^\prime,r;s,a) ((\nu_{s^\prime,a^\prime})_{D_\gamma} * \delta_r )(\phi)
+(\mathcal{T}^\pi \nu)_{s,a}  := \mathbb{E}_{s,a}^\pi [ ( (\nu (S^\prime,A^\prime))_{D_\gamma} * \delta_R ) ] = \sum_{s^\prime,a^\prime,r} \pi (a^\prime;s^\prime) p(s^\prime,r;s,a) ((\nu_{s^\prime,a^\prime})_{D_\gamma} * \delta_r )
 \]
+The distributional optimality operator is, if we choose $\pi$ in the above as greedy wrt. $Q^\nu (s,a)$.
  
 \rmkb{C51:\\
-Consider the Hilbert space 
+    We want to approximate the return distribution $\eta_{s,a}^\pi$ of $\pi$ for every $(s,a)$ on $[V_{min},V_{max}]$. For that denote the equidistant grid $z_i := V_{min}+ i \tau$, $i=1,...,K-1$ with step size $\tau$. We approximate the return distribution through 
+  \[
+    \eta_{s,a}^\pi  \approx \hat{\eta}_{s,a}^\pi:= \sum_{i=1}^K p_i (s,a) \delta_{z_i}.
+    \] 
+    Sample for every $(s_t,a_t,r_t,s_{t+1})$ a greedy action wrt. to $\hat{\eta}^\pi_{s_{t+1},\cdot}$ get a reward $r$ and denote the truncated return 
+    as$Tz_i :=\min\{V_{max},\max \{ V_{min} , r+\gamma z_i \}\}$, so that we have bounded rewards. And get the push forward:
+    \[
+    ((\eta_{s,a}^\pi)_{f_{r,\gamma}})  \approx \sum_{i=1}^K p_i (s,a) \delta_{Tz_i}
+    \]
+    However, now the support of the resulting distribution is no longer on the grid. We need to project it back to the grid. Denote
 \[
-\left( \mathcal{P}([V_{min},V_{max}]), l_2 (\nu,\mu) := (\int_{\mathbb{R}} (F_\nu (x) - F_\mu (x))^2 dx )^{1/2} \right).
+b_i = \frac{Tz_i -V_{min}}{\tau}
 \]
-For step size $\tau$ we denote the grid points of the equidistant grid on $[V_{min},V_{max}]$ as $z_i := V_{min} + i \tau$. Denote by $S_h$ the space of continuous, piecewise linear functions. Let $\phi_i (x)$ be hat functions. 
+then we project back on the grid to the closest atoms by 
+\[
+m_l(s,a) += p_i (s,a) ( \lceil b_i \rceil- b_i), \quad m_u (s,a)+= p_i (s,a) ( b_i- \lfloor b_i \rfloor)
+\]
+Finally, we do a step with the distributional Bellman operator. This is done by minimizing the cross entropy of our target vector $m$ and the current best prediction $p$: 
+\[
+- \sum_i m_i \log ( p_i^\theta (s,a))
+\]
 }
+\section{Quantile Regression}
+Unlike before (variable weights and fixed grid) we now have fixed weights $(\frac{i}{N})$ and a variable grid. We use Quantile regression to minimize the Wasserstein distance.
+\[
+\mathcal{L}_\theta := \{ Z_\theta (s,a) := \frac{1}{N} \sum_{i=1}^N \delta_{\theta_i (s,a)}  \mid \theta : \mathcal{S} \times \mathcal{A} \to \mathbb{R}^N \}, \quad \text{ set of quantile functions $\theta$ can be NN.}
+\] 
+\textbf{Idea:} Calculate target as in C51 (just without projection)
+\[
+\hat{\eta} \leftarrow (\eta^\pi_{s_{t+1},a^*})_{f_{r,\gamma}}, \quad a^* := \arg \max_{a} \mathbb{E}_{Z \sim \hat{\eta}_{s_{t+1},a}} [Z].
+\]
+Use the Wasserstein distance 
+\[
+\Pi_W \hat{\eta} := \arg \min_{Z_\theta \mathcal{L}_\theta} W^1 (\hat{\eta}(s,a),Z_\theta (s,a)).
+\]
+\lem{}{
+    For $Z_\theta \in \mathcal{L}_\theta$ and arbitrary $\eta$ with finite moments: 
+    \[
+    W^1 (\eta,Z_\theta) = \sum_{i=1}^N \int_{\tau_{i-1}}^{\tau_i} |F_\eta^{-1} (\tau) - \theta_i| d \tau.
+    \]
+}
+It then holds that 
+\[  
+\theta_i = F_\eta^{-1} (\frac{\tau_{i-1}+\tau_i}{2}) \in \arg \min_{\theta_i} \int_{\tau_{i-1}}^{\tau_i} |F_\eta^{-1} (\tau) - \theta_i| d \tau.
+\]
+This cannot be used (???). Instead we do quantile regression: 
+\[
+F_\eta^{-1} (\tau) = \arg \min_\theta \mathcal{L}_{QR}^\tau (\theta) = \mathbb{E}_{\hat{Z} \sim \eta} [ p_\tau (\hat{Z}-\theta) ], \quad p_\tau (u) := u (\tau - \textbf{1}_{u \leq 0}),
+\]
+which is an equivalent problem. In practice the Huber loss is included: 
+\[
+p_\tau^H (u) := (\tau - \textbf{1}_{u\leq 0}) \mathcal{L}_{Huber} (u).
+\] 
 
 \section{Deep Q-Networks}
 Deep Q-Networks (DQN) is a Q-learning variant that utilizes deep neural networks to approximate the Q-value. This algorithm addresses how to deal with large, continuous state action spaces $(\mathcal{S},\mathcal{A})$. The idea is to reduce dimensionality by plugging in the state space $\mathcal{S}$ (e.g. pixels in an Atari game) into a convolutional neural layer, which is the fed into a feed forward neural network that outputs the Q-value for each action $a \in \mathcal{A}$. Problems with simple neural networks are 
@@ -101,11 +149,11 @@ Q_{n+1} (s,a) = Q_n (s,a) + \alpha (y-Q_n (s,a)).
 \rmkb{
     When doing Q-learning with neural networks, we no longer do the gradient on $(s,a) \in \mathcal{S}\times \mathcal{A}$, but instead on a smaller parameter space $\Theta \subset  \mathcal{S}\times \mathcal{A}$. Additionally, parameterizing the target with a different set of parameters $\theta^-$ the gradient of the loss becomes 
     \[
-    \nabla_\theta L_n^Q = \mathbb{E} [ \nabla_\theta (Y_n^{\theta^-} - Q_n^\theta (S,A))^2 ] = -\mathbb{E} [ 2 (Y_n^{\theta^-} - Q_n^\theta (S,A)) \nabla_\theta Q_n^\theta (S,A) ].???-
+    \nabla_\theta L_n^Q = \mathbb{E} [ \nabla_\theta (Y_n^{\theta^-} - Q_n^\theta (S,A))^2 ] = -\mathbb{E} [ 2 (Y_n^{\theta^-} - Q_n^\theta (S,A)) \nabla_\theta Q_n^\theta (S,A) ].
     \]
-    So the gradient step for SGD becomes 
+    So the gradient descent step (we minimize the loss) for SGD becomes 
     \[
-    Q_{n+1}^\theta (s,a) = Q_n^\theta (s,a) + \alpha (y_n^{\theta^-} - Q_n^\theta (s,a)) \nabla_\theta Q_n^\theta (s,a).
+    Q_{n+1}^\theta (s,a) = Q_n^\theta (s,a) - \alpha (-2)(y_n^{\theta^-} - Q_n^\theta (s,a)) \nabla_\theta Q_n^\theta (s,a).
     \]
 }
 
@@ -118,7 +166,7 @@ Q_{n+1} (s,a) = Q_n (s,a) + \alpha (y-Q_n (s,a)).
     \[
     (f_k * h) (i) = \sum_{j=-n}^n f_k(i+s-j) h(i), \quad s \in \mathbb{N}.
     \]
-}
+}   
 
 \rmkb{
     For Atari games the Architecture is as follows:
@@ -241,7 +289,9 @@ Copy weights to target network: $\theta^- \leftarrow \theta$\;
         \item Multi-step return: trajectory sampling which corresponds to the n-step Bellman operator 
         \item Huber loss and clipping
     \end{itemize}
-}
+}   
+
+
 
 \section{Proximal Policy Gradient}
 Consider a finite time MDP and the respective Value/Q-functions:
@@ -387,6 +437,18 @@ is unbiased.
     \hat{A}_t^{GAE(\lambda)} := (1-\lambda) \sum_{k=0}^\infty \lambda^k \hat{A}_t^{(k)}.
     \]
     Using the telescoping sum, it can be rewritten as 
+    \begin{align*}
+        \hat{A}_t^{GAE(\lambda)} &:= (1-\lambda) \sum_{k=0}^\infty \lambda^k \hat{A}_t^{(k)} \\
+        &=(1-\lambda) \sum_{k=0}^\infty  \left( \sum_{i=0}^k \gamma^{i} \lambda^k R_{t+i} + \lambda^k V(S_{t+k+1}) \gamma^{k+1} - V(S_t) \lambda^k \right)\\
+        &=(1-\lambda) \sum_{i=0}^\infty \sum_{k=0}^\infty   \text{1}_{i\leq k} \gamma^{i} \lambda^k R_{t+i} +(1-\lambda)\sum_{k=0}^\infty \left( (\gamma \lambda)^k \gamma V(S_{t+k+1}) - V(S_t) \lambda^k \right)\\
+         &= \sum_{i=0}^\infty     \gamma^{i}  R_{t+i} (1-\lambda) \sum_{k=0}^\infty \text{1}_{i\leq k} \lambda^k  +(1-\lambda)\sum_{k=0}^\infty (\gamma \lambda)^k \gamma V(S_{t+k+1}) - V(S_t)  \\
+         &= \sum_{i=0}^\infty \gamma^{i}  R_{t+i} \lambda^{i}  +(1-\lambda)\sum_{k=0}^\infty (\gamma \lambda)^k \gamma V(S_{t+k+1}) - V(S_t)  \\
+         &= \sum_{k=0}^\infty (\gamma \lambda)^k (\gamma V(S_{t+k+1})+ R_{t+k}  ) -\lambda \sum_{k=0}^\infty (\gamma \lambda)^k \gamma V(S_{t+k+1}) - V(S_t)  \\
+          &= \sum_{k=0}^\infty (\gamma \lambda)^k (\gamma V(S_{t+k+1})+ R_{t+k}  ) - \sum_{k=0}^\infty (\gamma \lambda)^{k+1} V(S_{t+k+1}) - V(S_t)  \\
+          &= \sum_{k=0}^\infty (\gamma \lambda)^k (\gamma V(S_{t+k+1})+ R_{t+k}  ) - \sum_{l=1}^\infty (\gamma \lambda)^{l} V(S_{t+l}) - V(S_{t+0})  \\
+          &= \sum_{k=0}^\infty (\gamma \lambda)^k (\gamma V(S_{t+k+1})+ R_{t+k}  ) - \sum_{k=0}^\infty (\gamma \lambda)^{k} V(S_{t+k})\\
+          &= \sum_{k=0}^\infty (\gamma \lambda)^k (\gamma V(S_{t+k+1})+ R_{t+k}   - V(S_{t+k}))
+    \end{align*}
     \[
     \hat{A}_t^{GAE(\lambda)} = \sum_{l \in \mathbb{N}} (\gamma \lambda)^l \delta_{t+l}, \quad \delta_t = R_t + \gamma V(S_{t+1}) - V(S_t).
     \]
@@ -398,7 +460,7 @@ is unbiased.
     Note that this estimator assume access to all $k$-step estimators, i.e. access to infinite trajectories. In practice, trajectories are never infinite. So it is reasonable to only consider a finite time horizon. However, truncating the estimator destroys the geometric weighing.
 }
 
-\rmkb{
+\rmkb{  
     Fixed-Time Advantage estimation: Here the infinite exponential weighing has to be corrected for the finite time horizon. $\forall t <T < \infty$ define 
     \[
     \hat{A}_t^T := \frac{1-\lambda}{1-\lambda^{T-t}} \sum_{k=0}^{T-t-1} \lambda^k \hat{A}_t^{(k)}, 
@@ -454,12 +516,30 @@ Note that $\frac{1-\lambda^{T-t-1} }{1-\lambda^{T-t}} $ approaches one as $t \to
 \rmkb{CMA ES:\\
 To minimize $f:\mathbb{R}^d \to \mathbb{R}$ we iteratively update a sequence of $X^n \sim \mathcal{N}(m_n,\sigma_n^2 C_n)$ from which in each step $N$ samples are drawn, i.e. $\forall n \in \mathbb{N}$ sample $X_1^{(n)},...,X_N^{(n)} \sim \mathcal{N}(m_n,\sigma^2_n C_n)$ and order them such that 
 \[
-f(X_{1:N}^{(n)} \leq \cdots \leq f(X_{N:N}^{(n)} ) ).
+f(X_{1:N}^{(n)}) \leq \cdots \leq f(X_{N:N}^{(n)} ) .
 \]
 From the $K<N$ best candidates choose the next parameters as 
 \[
-m^{n+1} := \sum_{i=0}^K w_i X_{N-i:N}^{(n)}, \quad \text{where } w_1 > \cdots > w_K.
+m^{n+1} := \sum_{i=1}^K w_i X_{i:N}^{(n)}, \quad \text{where } w_1 > \cdots > w_K, \quad \sum_{i=1}^K w_i =1, \quad w_i \geq 0.
 \]
+Cumulative step-size adaptation: It controls the global step size $\sigma_n$ by comparing  the euclidean length of a trajectory of  distribution means against the expected length of a random walk. For $X_1,...,X_N \sim \mathcal{N}(0,I)$ the step process $P_T :=\sum_{n=1}^N X_n$ is a random walk. Then the following decomposition 
+\[
+\mathbb{V}[P_T] =\sum_{i=1}^N Id + \underbrace{\sum_{i \neq j}  \text{Cov}(X_i,X_j) }_{=0, iid}.
+\]
+and the expected length of the random walk is   
+\[
+\mathbb{E}[\| P_N \|_{l^2}^2] = \sum_{i=1}^N \mathbb{E}[| X_i |^2] =  \sum_{i=1}^N  \left( \mathbb{V}[| X_i |] +\mathbb{E}[| X_i |]^2  \right).
+\]
+If we assume that $X_i$ are negatively correlated, then the expected length of the random walk is smaller than the expected length of a random walk with independent steps. Thus, if the trajectory of distribution means is longer than the expected length of a random walk, then we increase $\sigma_n$ and otherwise we decrease it.\\
+We can also look at the difference of means this and last step and divide by the current variance, i.e. 
+\[
+p_\sigma^n:= \frac{1}{\sqrt{\sum_{i=1}^K w_i^2}} \sqrt{C_n^{-1/2}} \frac{m^{n}-m^{n-1}}{\sigma_n}.
+\]
+This should be Gaussian distributed as it is a linear transformation of two Gaussians. Negative correlation means that the average oscillates, as the next mean is on average in the opposite direction of the previous mean, i.e. it has smaller length. If we have positve correlation, we increase the variance for evaluation to encourage the forward motion. In contrast, if we have negative correlation, we decrease the variance, as we are oscillating around a minimum.
+\[
+\sigma_{n+1} := \sigma_n e^{ const. \frac{\| p_\sigma^n\|_{l^2}^2}{\mathbb{E}_{Y \sim \mathcal{N}(0,I)} [\| Y \|_{l^2}^2] } -1}
+\]
+We update $p_\sigma^n$, as a linear combination of the previous $p_\sigma^n$ and the last two means transformed by the current covariance matrix.
 }
 
 \rmkb{
