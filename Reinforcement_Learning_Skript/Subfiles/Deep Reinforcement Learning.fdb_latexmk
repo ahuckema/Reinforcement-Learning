@@ -1,12 +1,12 @@
 # Fdb version 4
-["biber Subfiles/Deep Reinforcement Learning"] 1771254957.17865 "Subfiles/Deep Reinforcement Learning.bcf" "Subfiles/Deep Reinforcement Learning.bbl" "Subfiles/Deep Reinforcement Learning" 1772300943.90308 0
-  "Subfiles/Deep Reinforcement Learning.bcf" 1772300943.63847 108917 05f14d3cf82d23add85c4ee544c7e222 "pdflatex"
+["biber Subfiles/Deep Reinforcement Learning"] 1771254957.17865 "Subfiles/Deep Reinforcement Learning.bcf" "Subfiles/Deep Reinforcement Learning.bbl" "Subfiles/Deep Reinforcement Learning" 1772443160.09334 0
+  "Subfiles/Deep Reinforcement Learning.bcf" 1772443159.93094 108917 05f14d3cf82d23add85c4ee544c7e222 "pdflatex"
   (generated)
   "Subfiles/Deep Reinforcement Learning.bbl"
   "Subfiles/Deep Reinforcement Learning.blg"
   (rewritten before read)
-["pdflatex"] 1772300941.74706 "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/Subfiles/Deep Reinforcement Learning.tex" "Subfiles/Deep Reinforcement Learning.pdf" "Deep Reinforcement Learning" 1772300943.9034 0
-  "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/Subfiles/Deep Reinforcement Learning.tex" 1772300941.48248 37643 5ad255116b43060e16fe905db2575d7a ""
+["pdflatex"] 1772443158.20089 "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/Subfiles/Deep Reinforcement Learning.tex" "Subfiles/Deep Reinforcement Learning.pdf" "Deep Reinforcement Learning" 1772443160.0936 0
+  "/Users/arne/Desktop/Uni Mannheim/Master/RL2/Skript/Reinforcement-Learning/Reinforcement_Learning_Skript/Subfiles/Deep Reinforcement Learning.tex" 1772443157.90927 37645 8ef831e0dfe5ba8517d745378a054b69 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -301,12 +301,12 @@
   "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1757064974 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1741450574 3345740 46b66fdb0378f7bf5921b5eabf1762b8 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "Subfiles/../main.tex" 1772282117.67858 9653 f3259f119cef7243e891901a2ff66ace ""
-  "Subfiles/Deep Reinforcement Learning.aux" 1772300943.61726 2061 cead03e778763f7eed68a6d29cb4864f "pdflatex"
+  "Subfiles/../main.tex" 1772443157.99733 9657 5b6492466acf7929ea0e3cf7164fa8a4 ""
+  "Subfiles/Deep Reinforcement Learning.aux" 1772443159.92721 2061 cead03e778763f7eed68a6d29cb4864f "pdflatex"
   "Subfiles/Deep Reinforcement Learning.bbl" 1771254967.2883 466 76d65a242ec496c9b4361af646ff12cb "biber Subfiles/Deep Reinforcement Learning"
-  "Subfiles/Deep Reinforcement Learning.out" 1772300943.62403 1622 9dbbdf3e155c5dcf53016be07059505a "pdflatex"
-  "Subfiles/Deep Reinforcement Learning.run.xml" 1772300943.6396 2484 ab951184049cc6336ed80065506e4a08 "pdflatex"
-  "Subfiles/Deep Reinforcement Learning.tex" 1772300941.48248 37643 5ad255116b43060e16fe905db2575d7a ""
+  "Subfiles/Deep Reinforcement Learning.out" 1772443159.92843 1622 9dbbdf3e155c5dcf53016be07059505a "pdflatex"
+  "Subfiles/Deep Reinforcement Learning.run.xml" 1772443159.93158 2484 ab951184049cc6336ed80065506e4a08 "pdflatex"
+  "Subfiles/Deep Reinforcement Learning.tex" 1772443157.90927 37645 8ef831e0dfe5ba8517d745378a054b69 ""
   "amd.sty" 1765642833.53079 7646 92bdc5dbfa337ea0a32c9ee79e92e868 ""
   "theorems.tex" 1765643226.97525 6051 0000b43ebd7e33abd919234d929db039 ""
   (generated)
